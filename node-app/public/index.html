@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Login con Bootstrap + Node.js" />
+    <title>Sign in · Bootstrap v5.3</title>
+    <meta name="theme-color" content="#712cf9" />
+
+    <link href="css/bootstrap.min.css" rel="stylesheet" />
+    <link href="css/sign-in.css" rel="stylesheet" />
+  </head>
+  <body class="d-flex align-items-center py-4 bg-body-tertiary">
+    <main class="form-signin w-100 m-auto">
+      <!-- LOGIN -->
+      <form id="loginForm">
+        <h1 class="h3 mb-3 fw-normal text-center">Please sign in</h1>
+
+        <div class="form-floating">
+          <input type="email" class="form-control" id="email" placeholder="name@example.com" required />
+          <label for="email">Email address</label>
+        </div>
+
+        <div class="form-floating">
+          <input type="password" class="form-control" id="password" placeholder="Password" required />
+          <label for="password">Password</label>
+        </div>
+
+        <button class="btn btn-primary w-100 py-2 mt-3" type="submit">Sign in</button>
+
+        <p class="mt-4 mb-0 text-center">
+          ¿No tienes cuenta? <a href="#" id="showRegister">Regístrate</a>
+        </p>
+      </form>
+
+      <!-- REGISTRO (oculto) -->
+      <form id="registerForm" class="d-none">
+        <h1 class="h3 mb-3 fw-normal text-center">Create account</h1>
+
+        <div class="form-floating">
+          <input type="text" class="form-control" id="regNombre" placeholder="Nombre" required />
+          <label for="regNombre">Nombre</label>
+        </div>
+
+        <div class="form-floating">
+          <input type="email" class="form-control" id="regEmail" placeholder="name@example.com" required />
+          <label for="regEmail">Email address</label>
+        </div>
+
+        <div class="form-floating">
+          <input type="password" class="form-control" id="regPassword" placeholder="Password" required />
+          <label for="regPassword">Password (mín. 6)</label>
+        </div>
+
+        <button class="btn btn-success w-100 py-2 mt-3" type="submit">Registrarme</button>
+
+        <p class="mt-4 mb-0 text-center">
+          ¿Ya tienes cuenta? <a href="#" id="showLogin">Inicia sesión</a>
+        </p>
+      </form>
+      <p class="mt-5 mb-3 text-body-secondary text-center">&copy; 2017–2025</p>
+    </main>
+
+    <script src="js/bootstrap.bundle.min.js"></script>
+
+    <script>
+      const loginForm = document.getElementById('loginForm');
+      const registerForm = document.getElementById('registerForm');
+
+      document.getElementById('showRegister').addEventListener('click', (e) => {
+        e.preventDefault();
+        loginForm.classList.add('d-none');
+        registerForm.classList.remove('d-none');
+      });
+
+      document.getElementById('showLogin').addEventListener('click', (e) => {
+        e.preventDefault();
+        registerForm.classList.add('d-none');
+        loginForm.classList.remove('d-none');
+      });
+
+
+		// LOGIN
+		loginForm.addEventListener('submit', async (e) => {
+		  e.preventDefault();
+		  const email = document.getElementById('email').value;
+		  const password = document.getElementById('password').value;
+
+		  try {
+		    const res = await fetch('/login', {
+		      method: 'POST',
+		      headers: { 'Content-Type': 'application/json' },
+		      body: JSON.stringify({ email, password })
+		    });
+		    const data = await res.json();
+
+		    if (data.success) {
+		      if (data.user.is_admin) {
+		        window.location.href = '/dashboard.html';
+		      } else {
+		        alert('✅ Bienvenido ' + data.user.nombre + '. No tienes acceso al dashboard.');
+		      }
+		    } else {
+		      alert('❌ ' + data.message);   // ← login falló (contraseña incorrecta, etc.)
+		    }
+		  } catch (err) {
+		    alert('Error de conexión con el servidor');   // ← error de red
+		    console.error(err);
+		  }
+		});
+
+
+
+
+
+    
+    
+    
+      // REGISTRO
+      registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const nombre = document.getElementById('regNombre').value;
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+
+        try {
+          const res = await fetch('/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre, email, password })
+          });
+          const data = await res.json();
+
+          if (data.success) {
+            alert('✅ Registrado. Ahora inicia sesión.');
+            registerForm.classList.add('d-none');
+            loginForm.classList.remove('d-none');
+          } else {
+            alert('❌ ' + data.message);
+          }
+        } catch (err) {
+          alert('Error de conexión con el servidor');
+          console.error(err);
+        }
+      });
+		// Si ya hay sesión activa de admin, redirigir al dashboard
+		// PERO solo si NO venimos de un logout
+		(async () => {
+		  // Si venimos de un logout, no verificar sesión
+		  const params = new URLSearchParams(window.location.search);
+		  if (params.get('logout') === '1') {
+		    // Limpiar el parámetro de la URL
+		    window.history.replaceState({}, '', '/');
+		    return;  // No redirigir
+		  }
+		  
+		  try {
+		    const res = await fetch('/profile', { credentials: 'same-origin' });
+		    const data = await res.json();
+		    if (data.success && data.user.is_admin) {
+		      window.location.href = '/dashboard.html';
+		    }
+		  } catch (_) {}
+		})();
+
+
+
+
+      
+    </script>
+  </body>
+</html>

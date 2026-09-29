@@ -1,0 +1,839 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · Gestión</title>
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    .sidebar { min-height: 100vh; background-color: #212529; }
+    .sidebar .nav-link { color: rgba(255,255,255,.75); cursor: pointer; }
+    .sidebar .nav-link.active { color: #fff; background-color: rgba(255,255,255,.1); }
+    .sidebar .nav-link:hover { color: #fff; }
+    .main-content { min-height: 100vh; }
+    .session-card { font-size: .875rem; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+
+      <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse p-0">
+        <div class="position-sticky pt-3">
+          <a href="#" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none px-3">
+            <span class="fs-4">Mi App</span>
+          </a>
+          <hr class="text-secondary">
+          <ul class="nav flex-column">
+
+
+            <li class="nav-item">
+              <a class="nav-link active" data-section="users"><i class="bi bi-people me-2"></i> Usuarios</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-section="sessions"><i class="bi bi-shield-lock me-2"></i> Sesiones activas</a>
+            </li>
+			<li class="nav-item">
+			  <a class="nav-link" href="#" id="btnLogoutSidebar"><i class="bi bi-box-arrow-left me-2"></i> Cerrar sesión</a>
+			</li>
+
+            
+          </ul>
+        </div>
+      </nav>
+
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content bg-light">
+
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2" id="sectionTitle">Gestión de Usuarios</h1>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle me-1"></i>
+              <span id="currentUser">...</span>
+              <span class="badge bg-warning text-dark ms-1">ADMIN</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" id="btnLogout">Cerrar sesión</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="alertBox" class="alert d-none" role="alert"></div>
+
+        <!-- SECCIÓN USUARIOS -->
+        <div id="section-users">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+              <thead class="table-dark">
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Creado</th>
+                  <th class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr><td colspan="6" class="text-center text-muted py-4">
+                  <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN SESIONES -->
+        <div id="section-sessions" class="d-none">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <p class="text-muted mb-0">Sesiones activas en el sistema (ordenadas por expiración).</p>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadSessions()">
+              <i class="bi bi-arrow-clockwise"></i> Refrescar
+            </button>
+          </div>
+          <div id="sessionsList" class="row g-3">
+            <div class="col-12 text-center text-muted py-4">
+              <div class="spinner-border spinner-border-sm me-2"></div>Cargando sesiones...
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="editForm">
+          <div class="modal-header">
+            <h5 class="modal-title">Editar Usuario</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="editId">
+            <div class="mb-3">
+              <label for="editNombre" class="form-label">Nombre</label>
+              <input type="text" class="form-control" id="editNombre" required>
+            </div>
+            <div class="mb-3">
+              <label for="editEmail" class="form-label">Email</label>
+              <input type="email" class="form-control" id="editEmail" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ELIMINAR -->
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar eliminación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          ¿Seguro que quieres eliminar a <strong id="deleteNombre"></strong>?
+          <input type="hidden" id="deleteId">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/bootstrap.bundle.min.js"></script>
+  <script>
+    const tbody = document.getElementById('usersTableBody');
+    const sessionsList = document.getElementById('sessionsList');
+    const alertBox = document.getElementById('alertBox');
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    let currentUser = null;
+
+    function showAlert(message, type = 'success') {
+      alertBox.className = `alert alert-${type}`;
+      alertBox.textContent = message;
+      alertBox.classList.remove('d-none');
+      setTimeout(() => alertBox.classList.add('d-none'), 3000);
+    }
+
+    async function checkAuth() {
+      const res = await fetch('/profile');
+      const data = await res.json();
+      if (!data.success) { window.location.href = '/'; return null; }
+      if (!data.user.is_admin) { alert('Acceso denegado'); return null; }
+      currentUser = data.user;
+      document.getElementById('currentUser').textContent = data.user.nombre;
+      return data.user;
+    }
+
+    // ============ USUARIOS ============
+    async function loadUsers() {
+      try {
+        const res = await fetch('/users');
+        const data = await res.json();
+        if (!data.success) { showAlert(data.message, 'danger'); return; }
+
+        tbody.innerHTML = '';
+        data.users.forEach(user => {
+          const isMe = user.id === currentUser.id;
+          const rolBadge = user.is_admin
+            ? '<span class="badge bg-warning text-dark">ADMIN</span>'
+            : '<span class="badge bg-secondary">Usuario</span>';
+
+          const adminBtn = isMe ? '<span class="text-muted small">(tú)</span>'
+            : `<button class="btn btn-sm ${user.is_admin ? 'btn-outline-warning' : 'btn-outline-success'} me-1"
+                 onclick="toggleAdmin(${user.id}, ${user.is_admin ? 'false' : 'true'}, '${user.nombre.replace(/'/g, "\\'")}')"
+                 title="${user.is_admin ? 'Quitar admin' : 'Hacer admin'}">
+                 <i class="bi bi-shield-${user.is_admin ? 'x' : 'check'}"></i>
+               </button>`;
+
+          const closeSessionsBtn = isMe ? ''
+            : `<button class="btn btn-sm btn-outline-danger me-1"
+                 onclick="closeUserSessions(${user.id}, '${user.nombre.replace(/'/g, "\\'")}')"
+                 title="Cerrar todas sus sesiones">
+                 <i class="bi bi-x-circle"></i>
+               </button>`;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${user.id}</td>
+            <td>${user.nombre}</td>
+            <td>${user.email}</td>
+            <td>${rolBadge}</td>
+            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+            <td class="text-end">
+              ${adminBtn}
+              ${closeSessionsBtn}
+              <button class="btn btn-sm btn-primary me-1" onclick="openEdit(${user.id}, '${user.nombre.replace(/'/g, "\\'")}', '${user.email}')">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" ${isMe ? 'disabled' : ''} onclick="openDelete(${user.id}, '${user.nombre.replace(/'/g, "\\'")}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        showAlert('Error al cargar usuarios', 'danger');
+      }
+    }
+
+    // ============ SESIONES ============
+    async function loadSessions() {
+      try {
+        const res = await fetch('/sessions');
+        const data = await res.json();
+        if (!data.success) { showAlert(data.message, 'danger'); return; }
+
+        sessionsList.innerHTML = '';
+
+        if (data.sessions.length === 0) {
+          sessionsList.innerHTML = '<div class="col-12 text-center text-muted py-4">No hay sesiones activas</div>';
+          return;
+        }
+
+        data.sessions.forEach(s => {
+          const isMe = s.sid === document.cookie.match(/connect\.sid=([^;]+)/)?.[1];
+          const exp = new Date(s.expired);
+          const mins = Math.max(0, Math.round((exp - Date.now()) / 60000));
+
+          const card = document.createElement('div');
+          card.className = 'col-md-6 col-lg-4';
+          card.innerHTML = `
+            <div class="card session-card shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="card-title mb-0">
+                    <i class="bi bi-person-circle me-1"></i>
+                    ${s.user.nombre}
+                    ${isMe ? '<span class="badge bg-info text-dark ms-1">TÚ</span>' : ''}
+                  </h6>
+                  ${s.user.is_admin ? '<span class="badge bg-warning text-dark">ADMIN</span>' : ''}
+                </div>
+                <p class="text-muted mb-1"><small>${s.user.email}</small></p>
+                <p class="mb-1"><small><i class="bi bi-hdd-network me-1"></i>IP: ${s.ip || 'N/A'}</small></p>
+                <p class="mb-1"><small><i class="bi bi-clock me-1"></i>Login: ${s.loginAt ? new Date(s.loginAt).toLocaleString() : 'N/A'}</small></p>
+                <p class="mb-2"><small><i class="bi bi-hourglass-split me-1"></i>Expira en: ${mins} min</small></p>
+                <p class="text-muted mb-2" style="font-size:.75rem; word-break:break-all;">
+                  <i class="bi bi-browser-chrome me-1"></i>${(s.userAgent || 'N/A').substring(0, 80)}...
+                </p>
+                <button class="btn btn-sm btn-danger w-100" onclick="closeSession('${s.sid}', '${s.user.nombre.replace(/'/g, "\\'")}')">
+                  <i class="bi bi-x-circle me-1"></i>Cerrar esta sesión
+                </button>
+              </div>
+            </div>
+          `;
+          sessionsList.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        showAlert('Error al cargar sesiones', 'danger');
+      }
+    }
+
+    // ============ ACCIONES ============
+    window.openEdit = (id, nombre, email) => {
+      document.getElementById('editId').value = id;
+      document.getElementById('editNombre').value = nombre;
+      document.getElementById('editEmail').value = email;
+      editModal.show();
+    };
+
+    window.openDelete = (id, nombre) => {
+      document.getElementById('deleteId').value = id;
+      document.getElementById('deleteNombre').textContent = nombre;
+      deleteModal.show();
+    };
+
+    window.toggleAdmin = async (id, is_admin, nombre) => {
+      const accion = is_admin ? 'hacer admin' : 'quitar admin';
+      if (!confirm(`¿Seguro que quieres ${accion} a "${nombre}"?`)) return;
+      const res = await fetch(`/users/${id}/admin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_admin })
+      });
+      const data = await res.json();
+      showAlert(data.message, data.success ? 'success' : 'danger');
+      if (data.success) loadUsers();
+    };
+
+    window.closeSession = async (sid, nombre) => {
+      if (!confirm(`¿Cerrar la sesión de "${nombre}"?`)) return;
+      const res = await fetch(`/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
+      const data = await res.json();
+      showAlert(data.message, data.success ? 'success' : 'danger');
+      if (data.success) loadSessions();
+    };
+
+    window.closeUserSessions = async (id, nombre) => {
+      if (!confirm(`¿Cerrar TODAS las sesiones de "${nombre}"?`)) return;
+      const res = await fetch(`/users/${id}/sessions`, { method: 'DELETE' });
+      const data = await res.json();
+      showAlert(data.message, data.success ? 'success' : 'danger');
+    };
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editId').value;
+      const nombre = document.getElementById('editNombre').value;
+      const email = document.getElementById('editEmail').value;
+      const res = await fetch(`/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, email })
+      });
+      const data = await res.json();
+      if (data.success) { editModal.hide(); showAlert('Usuario actualizado'); loadUsers(); }
+      else showAlert(data.message, 'danger');
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+      const id = document.getElementById('deleteId').value;
+      const res = await fetch(`/users/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) { deleteModal.hide(); showAlert('Usuario eliminado'); loadUsers(); }
+      else showAlert(data.message, 'danger');
+    });
+
+	// Logout desde el dropdown
+	document.getElementById('btnLogout').addEventListener('click', async (e) => {
+	  e.preventDefault();
+	  e.stopPropagation();
+	  try {
+	    await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
+	    window.location.replace('/?logout=1');
+	  } catch (err) {
+	    console.error('Error en logout:', err);
+	    window.location.replace('/?logout=1');
+	  }
+	});
+
+	// Logout desde el sidebar
+	document.getElementById('btnLogoutSidebar').addEventListener('click', async (e) => {
+	  e.preventDefault();
+	  e.stopPropagation();
+	  try {
+	    await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
+	    window.location.replace('/?logout=1');
+	  } catch (err) {
+	    console.error('Error en logout sidebar:', err);
+	    window.location.replace('/?logout=1');
+	  }
+	});
+
+
+	  try {
+	    const res = await fetch('/logout', { 
+	      method: 'POST',
+	      credentials: 'same-origin'  // asegura que se envíe la cookie
+	    });
+	    const data = await res.json();
+	    
+	    if (data.success) {
+	      // ✅ Esperamos la respuesta ANTES de redirigir
+	      window.location.replace('/');
+	    } else {
+	      alert('Error al cerrar sesión: ' + data.message);
+	    }
+	  } catch (err) {
+	    console.error('Error en logout:', err);
+	    // En caso de error, forzamos la redirección igual
+	    window.location.replace('/');
+	  }
+		});
+
+    // ============ NAVEGACIÓN ============
+    document.querySelectorAll('.sidebar .nav-link[data-section]').forEach(link => {
+      link.addEventListener('click', () => {
+        const section = link.dataset.section;
+
+        document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+
+        document.getElementById('section-users').classList.toggle('d-none', section !== 'users');
+        document.getElementById('section-sessions').classList.toggle('d-none', section !== 'sessions');
+        document.getElementById('sectionTitle').textContent =
+          section === 'users' ? 'Gestión de Usuarios' : 'Sesiones Activas';
+
+        if (section === 'sessions') loadSessions();
+      });
+    });
+
+    // ============ INIT ============
+    checkAuth().then(user => {
+      if (user) {
+        loadUsers();
+        // Auto-refresh de sesiones cada 30s si estamos en esa sección
+        setInterval(() => {
+          if (!document.getElementById('section-sessions').classList.contains('d-none')) {
+            loadSessions();
+          }
+        }, 30000);
+      }
+    });
+  </script>
+</body>
+</html>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · Gestión</title>
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    .sidebar { min-height: 100vh; background-color: #212529; }
+    .sidebar .nav-link { color: rgba(255,255,255,.75); cursor: pointer; }
+    .sidebar .nav-link.active { color: #fff; background-color: rgba(255,255,255,.1); }
+    .sidebar .nav-link:hover { color: #fff; }
+    .main-content { min-height: 100vh; }
+    .session-card { font-size: .875rem; }
+  </style>
+</head>
+<body>
+  <div class="container-fluid">
+    <div class="row">
+
+      <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse p-0">
+        <div class="position-sticky pt-3">
+          <a href="#" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none px-3">
+            <span class="fs-4">Mi App</span>
+          </a>
+          <hr class="text-secondary">
+          <ul class="nav flex-column">
+            <li class="nav-item">
+              <a class="nav-link active" data-section="users"><i class="bi bi-people me-2"></i> Usuarios</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-section="sessions"><i class="bi bi-shield-lock me-2"></i> Sesiones activas</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#" id="btnLogoutSidebar"><i class="bi bi-box-arrow-left me-2"></i> Cerrar sesión</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content bg-light">
+
+        <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+          <h1 class="h2" id="sectionTitle">Gestión de Usuarios</h1>
+          <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+              <i class="bi bi-person-circle me-1"></i>
+              <span id="currentUser">...</span>
+              <span class="badge bg-warning text-dark ms-1">ADMIN</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#" id="btnLogout">Cerrar sesión</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="alertBox" class="alert d-none" role="alert"></div>
+
+        <!-- SECCIÓN USUARIOS -->
+        <div id="section-users">
+          <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+              <thead class="table-dark">
+                <tr>
+                  <th>ID</th>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Rol</th>
+                  <th>Creado</th>
+                  <th class="text-end">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="usersTableBody">
+                <tr><td colspan="6" class="text-center text-muted py-4">
+                  <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN SESIONES -->
+        <div id="section-sessions" class="d-none">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <p class="text-muted mb-0">Sesiones activas en el sistema (ordenadas por expiración).</p>
+            <button class="btn btn-sm btn-outline-primary" onclick="loadSessions()">
+              <i class="bi bi-arrow-clockwise"></i> Refrescar
+            </button>
+          </div>
+          <div id="sessionsList" class="row g-3">
+            <div class="col-12 text-center text-muted py-4">
+              <div class="spinner-border spinner-border-sm me-2"></div>Cargando sesiones...
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR -->
+  <div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="editForm">
+          <div class="modal-header">
+            <h5 class="modal-title">Editar Usuario</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="editId">
+            <div class="mb-3">
+              <label for="editNombre" class="form-label">Nombre</label>
+              <input type="text" class="form-control" id="editNombre" required>
+            </div>
+            <div class="mb-3">
+              <label for="editEmail" class="form-label">Email</label>
+              <input type="email" class="form-control" id="editEmail" required>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL ELIMINAR -->
+  <div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar eliminación</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          ¿Seguro que quieres eliminar a <strong id="deleteNombre"></strong>?
+          <input type="hidden" id="deleteId">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/bootstrap.bundle.min.js"></script>
+  <script>
+    const tbody = document.getElementById('usersTableBody');
+    const sessionsList = document.getElementById('sessionsList');
+    const alertBox = document.getElementById('alertBox');
+    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    let currentUser = null;
+
+    function showAlert(message, type = 'success') {
+      alertBox.className = `alert alert-${type}`;
+      alertBox.textContent = message;
+      alertBox.classList.remove('d-none');
+      setTimeout(() => alertBox.classList.add('d-none'), 3000);
+    }
+
+    async function checkAuth() {
+      const res = await fetch('/profile');
+      const data = await res.json();
+      if (!data.success) { window.location.href = '/'; return null; }
+      if (!data.user.is_admin) { alert('Acceso denegado'); window.location.href = '/'; return null; }
+      currentUser = data.user;
+      document.getElementById('currentUser').textContent = data.user.nombre;
+      return data.user;
+    }
+
+    // ============ USUARIOS ============
+    async function loadUsers() {
+      try {
+        const res = await fetch('/users');
+        const data = await res.json();
+        if (!data.success) { showAlert(data.message, 'danger'); return; }
+
+        tbody.innerHTML = '';
+        data.users.forEach(user => {
+          const isMe = user.id === currentUser.id;
+          const rolBadge = user.is_admin
+            ? '<span class="badge bg-warning text-dark">ADMIN</span>'
+            : '<span class="badge bg-secondary">Usuario</span>';
+
+          const adminBtn = isMe ? '<span class="text-muted small">(tú)</span>'
+            : `<button class="btn btn-sm ${user.is_admin ? 'btn-outline-warning' : 'btn-outline-success'} me-1"
+                 onclick="toggleAdmin(${user.id}, ${user.is_admin ? 'false' : 'true'}, '${user.nombre.replace(/'/g, "\\'")}')"
+                 title="${user.is_admin ? 'Quitar admin' : 'Hacer admin'}">
+                 <i class="bi bi-shield-${user.is_admin ? 'x' : 'check'}"></i>
+               </button>`;
+
+          const closeSessionsBtn = isMe ? ''
+            : `<button class="btn btn-sm btn-outline-danger me-1"
+                 onclick="closeUserSessions(${user.id}, '${user.nombre.replace(/'/g, "\\'")}')"
+                 title="Cerrar todas sus sesiones">
+                 <i class="bi bi-x-circle"></i>
+               </button>`;
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${user.id}</td>
+            <td>${user.nombre}</td>
+            <td>${user.email}</td>
+            <td>${rolBadge}</td>
+            <td>${new Date(user.created_at).toLocaleDateString()}</td>
+            <td class="text-end">
+              ${adminBtn}
+              ${closeSessionsBtn}
+              <button class="btn btn-sm btn-primary me-1" onclick="openEdit(${user.id}, '${user.nombre.replace(/'/g, "\\'")}', '${user.email}')">
+                <i class="bi bi-pencil"></i>
+              </button>
+              <button class="btn btn-sm btn-danger" ${isMe ? 'disabled' : ''} onclick="openDelete(${user.id}, '${user.nombre.replace(/'/g, "\\'")}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+        showAlert('Error al cargar usuarios', 'danger');
+      }
+    }
+
+    // ============ SESIONES ============
+    async function loadSessions() {
+      try {
+        const res = await fetch('/sessions');
+        const data = await res.json();
+        if (!data.success) { showAlert(data.message, 'danger'); return; }
+
+        sessionsList.innerHTML = '';
+
+        if (data.sessions.length === 0) {
+          sessionsList.innerHTML = '<div class="col-12 text-center text-muted py-4">No hay sesiones activas</div>';
+          return;
+        }
+
+        data.sessions.forEach(s => {
+          const isMe = s.sid === document.cookie.match(/connect\.sid=([^;]+)/)?.[1];
+          const exp = new Date(s.expired);
+          const mins = Math.max(0, Math.round((exp - Date.now()) / 60000));
+
+          const card = document.createElement('div');
+          card.className = 'col-md-6 col-lg-4';
+          card.innerHTML = `
+            <div class="card session-card shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="card-title mb-0">
+                    <i class="bi bi-person-circle me-1"></i>
+                    ${s.user.nombre}
+                    ${isMe ? '<span class="badge bg-info text-dark ms-1">TÚ</span>' : ''}
+                  </h6>
+                  ${s.user.is_admin ? '<span class="badge bg-warning text-dark">ADMIN</span>' : ''}
+                </div>
+                <p class="text-muted mb-1"><small>${s.user.email}</small></p>
+                <p class="mb-1"><small><i class="bi bi-hdd-network me-1"></i>IP: ${s.ip || 'N/A'}</small></p>
+                <p class="mb-1"><small><i class="bi bi-clock me-1"></i>Login: ${s.loginAt ? new Date(s.loginAt).toLocaleString() : 'N/A'}</small></p>
+                <p class="mb-2"><small><i class="bi bi-hourglass-split me-1"></i>Expira en: ${mins} min</small></p>
+                <p class="text-muted mb-2" style="font-size:.75rem; word-break:break-all;">
+                  <i class="bi bi-browser-chrome me-1"></i>${(s.userAgent || 'N/A').substring(0, 80)}...
+                </p>
+                <button class="btn btn-sm btn-danger w-100" onclick="closeSession('${s.sid}', '${s.user.nombre.replace(/'/g, "\\'")}')">
+                  <i class="bi bi-x-circle me-1"></i>Cerrar esta sesión
+                </button>
+              </div>
+            </div>
+          `;
+          sessionsList.appendChild(card);
+        });
+      } catch (err) {
+        console.error(err);
+        showAlert('Error al cargar sesiones', 'danger');
+      }
+    }
+
+    // ============ ACCIONES ============
+    window.openEdit = (id, nombre, email) => {
+      document.getElementById('editId').value = id;
+      document.getElementById('editNombre').value = nombre;
+      document.getElementById('editEmail').value = email;
+      editModal.show();
+    };
+
+    window.openDelete = (id, nombre) => {
+      document.getElementById('deleteId').value = id;
+      document.getElementById('deleteNombre').textContent = nombre;
+      deleteModal.show();
+    };
+
+    window.toggleAdmin = async (id, is_admin, nombre) => {
+      const accion = is_admin ? 'hacer admin' : 'quitar admin';
+      if (!confirm(`¿Seguro que quieres ${accion} a "${nombre}"?`)) return;
+      const res = await fetch(`/users/${id}/admin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_admin })
+      });
+      const data = await res.json();
+      showAlert(data.message, data.success ? 'success' : 'danger');
+      if (data.success) loadUsers();
+    };
+
+    window.closeSession = async (sid, nombre) => {
+      if (!confirm(`¿Cerrar la sesión de "${nombre}"?`)) return;
+      const res = await fetch(`/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE' });
+      const data = await res.json();
+      showAlert(data.message, data.success ? 'success' : 'danger');
+      if (data.success) loadSessions();
+    };
+
+    window.closeUserSessions = async (id, nombre) => {
+      if (!confirm(`¿Cerrar TODAS las sesiones de "${nombre}"?`)) return;
+      const res = await fetch(`/users/${id}/sessions`, { method: 'DELETE' });
+      const data = await res.json();
+      showAlert(data.message, data.success ? 'success' : 'danger');
+    };
+
+    document.getElementById('editForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = document.getElementById('editId').value;
+      const nombre = document.getElementById('editNombre').value;
+      const email = document.getElementById('editEmail').value;
+      const res = await fetch(`/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, email })
+      });
+      const data = await res.json();
+      if (data.success) { editModal.hide(); showAlert('Usuario actualizado'); loadUsers(); }
+      else showAlert(data.message, 'danger');
+    });
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+      const id = document.getElementById('deleteId').value;
+      const res = await fetch(`/users/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) { deleteModal.hide(); showAlert('Usuario eliminado'); loadUsers(); }
+      else showAlert(data.message, 'danger');
+    });
+
+    // Logout desde el dropdown
+    document.getElementById('btnLogout').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
+        window.location.replace('/?logout=1');
+      } catch (err) {
+        console.error('Error en logout:', err);
+        window.location.replace('/?logout=1');
+      }
+    });
+
+    // Logout desde el sidebar
+    document.getElementById('btnLogoutSidebar').addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
+        window.location.replace('/?logout=1');
+      } catch (err) {
+        console.error('Error en logout sidebar:', err);
+        window.location.replace('/?logout=1');
+      }
+    });
+
+    // ============ NAVEGACIÓN ============
+    document.querySelectorAll('.sidebar .nav-link[data-section]').forEach(link => {
+      link.addEventListener('click', () => {
+        const section = link.dataset.section;
+
+        document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+
+        document.getElementById('section-users').classList.toggle('d-none', section !== 'users');
+        document.getElementById('section-sessions').classList.toggle('d-none', section !== 'sessions');
+        document.getElementById('sectionTitle').textContent =
+          section === 'users' ? 'Gestión de Usuarios' : 'Sesiones Activas';
+
+        if (section === 'sessions') loadSessions();
+      });
+    });
+
+    // ============ INIT ============
+    checkAuth().then(user => {
+      if (user) {
+        loadUsers();
+        // Auto-refresh de sesiones cada 30s si estamos en esa sección
+        setInterval(() => {
+          if (!document.getElementById('section-sessions').classList.contains('d-none')) {
+            loadSessions();
+          }
+        }, 30000);
+      }
+    });
+  </script>
+</body>
+</html>

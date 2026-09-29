@@ -1,0 +1,19 @@
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# Copiar solo los package.json primero (mejor cache)
+COPY node-app/package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Instalar nodemon globalmente
+RUN npm install -g nodemon
+
+# Copiar el resto del código
+COPY node-app/ ./
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
