@@ -56,7 +56,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 30 * 60 * 1000, // ⏱️ 30 min de inactividad
+    maxAge: 30 * 60 * 1000, //  30 min de inactividad
     httpOnly: true
   }
 }));
@@ -100,7 +100,7 @@ async function initDB(retries = 10) {
 
       try {
         await conn.execute(`ALTER TABLE usuarios ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0`);
-        console.log('✅ Columna is_admin agregada');
+        console.log(' Columna is_admin agregada');
       } catch (_) {}
 
       const [rows] = await conn.execute('SELECT COUNT(*) AS count FROM usuarios');
@@ -110,18 +110,18 @@ async function initDB(retries = 10) {
           'INSERT INTO usuarios (nombre, email, password, is_admin) VALUES (?, ?, ?, 1)',
           ['Admin', 'admin@test.com', hashed]
         );
-        console.log('✅ Admin creado: admin@test.com / 123456');
+        console.log('Admin creado: admin@test.com / 123456');
       }
 
       conn.release();
-      console.log('✅ Base de datos lista');
+      console.log('Base de datos lista');
       return;
     } catch (error) {
-      console.error(`⏳ DB no lista (${i + 1}/${retries}):`, error.message);
+      console.error(`DB no lista (${i + 1}/${retries}):`, error.message);
       await new Promise((r) => setTimeout(r, 3000));
     }
   }
-  console.error('❌ No se pudo inicializar la DB');
+  console.error(' No se pudo inicializar la DB');
 }
 
 initDB();
@@ -182,10 +182,10 @@ app.post('/login', async (req, res) => {
     // 🔑 FORZAR guardado en el store ANTES de responder
     req.session.save((err) => {
       if (err) {
-        console.error('❌ Error guardando sesión:', err);
+        console.error('Error guardando sesión:', err);
         return res.status(500).json({ success: false, message: 'Error al guardar sesión' });
       }
-      console.log('✅ Sesión guardada en DB:', req.sessionID);
+      console.log('Sesión guardada en DB:', req.sessionID);
       res.json({ success: true, message: 'Login exitoso', user: req.session.user });
     });
 
@@ -320,6 +320,7 @@ app.put('/users/:id/admin', requireAdmin, async (req, res) => {
 // ==================== GESTIÓN DE SESIONES (ADMIN) ====================
 
 // 10. LISTAR SESIONES ACTIVAS
+// 10. LISTAR SESIONES ACTIVAS
 app.get('/sessions', requireAdmin, async (req, res) => {
   try {
     const rows = await knexInstance('sessions')
@@ -328,7 +329,12 @@ app.get('/sessions', requireAdmin, async (req, res) => {
 
     const sessions = rows.map(r => {
       let data = {};
-      try { data = JSON.parse(r.sess); } catch (_) {}
+      try {
+        // Si ya es un objeto, lo usamos tal cual; si es string, lo parseamos
+        data = typeof r.sess === 'string' ? JSON.parse(r.sess) : (r.sess || {});
+      } catch (err) {
+        console.error('Error parseando sesión:', err);
+      }
       return {
         sid: r.sid,
         user: data.user || null,
@@ -379,6 +385,6 @@ app.delete('/users/:id/sessions', requireAdmin, async (req, res) => {
 
 // ==================== INICIO ====================
 app.listen(port, '0.0.0.0', () => {
-  console.log(`🚀 Servidor en http://localhost:${port}`);
-  console.log(`👤 Admin: admin@test.com / 123456`);
+  console.log(`Servidor en http://localhost:${port}`);
+  console.log(`Admin: admin@test.com / 123456`);
 });
