@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard · Gestión</title>
+  <title>Dashboard · Salón de Eventos</title>
   <link href="css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
   <style>
@@ -19,15 +19,22 @@
   <div class="container-fluid">
     <div class="row">
 
+      <!-- SIDEBAR -->
       <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse p-0">
         <div class="position-sticky pt-3">
           <a href="#" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-white text-decoration-none px-3">
-            <span class="fs-4">Mi App</span>
+            <span class="fs-4">Salón App</span>
           </a>
           <hr class="text-secondary">
           <ul class="nav flex-column">
             <li class="nav-item">
-              <a class="nav-link active" data-section="users"><i class="bi bi-people me-2"></i> Usuarios</a>
+              <a class="nav-link active" data-section="reservaciones"><i class="bi bi-calendar-check me-2"></i> Reservaciones & POS</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-section="contaduria"><i class="bi bi-cash-stack me-2"></i> Contaduría</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-section="users"><i class="bi bi-people me-2"></i> Usuarios</a>
             </li>
             <li class="nav-item">
               <a class="nav-link" data-section="sessions"><i class="bi bi-shield-lock me-2"></i> Sesiones activas</a>
@@ -39,42 +46,90 @@
         </div>
       </nav>
 
+      <!-- MAIN CONTENT -->
       <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content bg-light">
-
         <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-          <h1 class="h2" id="sectionTitle">Gestión de Usuarios</h1>
-          <div class="dropdown">
-            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-              <i class="bi bi-person-circle me-1"></i>
-              <span id="currentUser">...</span>
-              <span class="badge bg-warning text-dark ms-1">ADMIN</span>
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="#" id="btnLogout">Cerrar sesión</a></li>
-            </ul>
+          <h1 class="h2" id="sectionTitle">Gestión de Reservaciones</h1>
+          <div class="d-flex align-items-center gap-2">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="bi bi-person-circle me-1"></i>
+                <span id="currentUser">...</span>
+                <span class="badge bg-warning text-dark ms-1">ADMIN</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" id="btnLogout">Cerrar sesión</a></li>
+              </ul>
+            </div>
           </div>
         </div>
 
         <div id="alertBox" class="alert d-none" role="alert"></div>
 
-        <!-- SECCIÓN USUARIOS -->
-        <div id="section-users">
-          <div class="table-responsive">
+        <!-- SECCIÓN RESERVACIONES & POS -->
+        <div id="section-reservaciones">
+          <div class="row mb-4">
+            <div class="col-12 d-flex justify-content-between align-items-center">
+              <h4 class="mb-0">Listado de Reservaciones Activas</h4>
+              <button type="button" class="btn btn-success btn-sm" onclick="openNewReservation()">
+                <i class="bi bi-cart-plus me-1"></i> Nueva Reservación / POS
+              </button>
+            </div>
+          </div>
+          <div class="table-responsive bg-white p-3 rounded shadow-sm">
             <table class="table table-striped table-hover align-middle">
               <thead class="table-dark">
                 <tr>
                   <th>ID</th>
-                  <th>Nombre</th>
-                  <th>Email</th>
-                  <th>Rol</th>
-                  <th>Creado</th>
-                  <th class="text-end">Acciones</th>
+                  <th>Cliente</th>
+                  <th>Teléfono</th>
+                  <th>Salón</th>
+                  <th>Fecha y Hora</th>
+                  <th>Estado</th>
+                  <th>Total</th>
+                  <th class="text-center">Acciones</th>
                 </tr>
               </thead>
+              <tbody id="reservacionesTableBody">
+                <tr><td colspan="8" class="text-center text-muted py-4">Cargando reservaciones...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN CONTADURÍA -->
+        <div id="section-contaduria" class="d-none">
+          <div class="row mb-4">
+            <div class="col-md-4">
+              <div class="card text-white bg-success shadow-sm">
+                <div class="card-body">
+                  <h5 class="card-title">Ganancias Totales</h5>
+                  <h3 class="card-text" id="totalGanancias">$0.00</h3>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive bg-white p-3 rounded shadow-sm">
+            <table class="table table-striped table-hover align-middle">
+              <thead class="table-dark">
+                <tr><th>ID</th><th>Cliente</th><th>Teléfono</th><th>Fecha</th><th>Estado</th><th>Total</th></tr>
+              </thead>
+              <tbody id="contaduriaTableBody">
+                <tr><td colspan="6" class="text-center text-muted py-4">Cargando datos...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- SECCIÓN USUARIOS -->
+        <div id="section-users" class="d-none">
+          <div class="table-responsive bg-white p-3 rounded shadow-sm">
+            <table class="table table-striped table-hover align-middle">
+              <thead class="table-dark">
+                <tr><th>ID</th><th>Nombre</th><th>Email</th><th>Rol</th><th>Creado</th></tr>
+              </thead>
               <tbody id="usersTableBody">
-                <tr><td colspan="6" class="text-center text-muted py-4">
-                  <div class="spinner-border spinner-border-sm me-2"></div>Cargando...
-                </td></tr>
+                <tr><td colspan="5" class="text-center text-muted py-4">Cargando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -82,16 +137,8 @@
 
         <!-- SECCIÓN SESIONES -->
         <div id="section-sessions" class="d-none">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <p class="text-muted mb-0">Sesiones activas en el sistema (ordenadas por expiración).</p>
-            <button class="btn btn-sm btn-outline-primary" onclick="loadSessions()">
-              <i class="bi bi-arrow-clockwise"></i> Refrescar
-            </button>
-          </div>
           <div id="sessionsList" class="row g-3">
-            <div class="col-12 text-center text-muted py-4">
-              <div class="spinner-border spinner-border-sm me-2"></div>Cargando sesiones...
-            </div>
+            <div class="col-12 text-center text-muted py-4">Cargando sesiones...</div>
           </div>
         </div>
 
@@ -99,73 +146,161 @@
     </div>
   </div>
 
-  <!-- MODAL EDITAR -->
-  <div class="modal fade" id="editModal" tabindex="-1">
-    <div class="modal-dialog">
+  <!-- ================= MODAL NUEVA RESERVACIÓN (POS) ================= -->
+  <div class="modal fade" id="reservationModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
       <div class="modal-content">
-        <form id="editForm">
-          <div class="modal-header">
-            <h5 class="modal-title">Editar Usuario</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <input type="hidden" id="editId">
-            <div class="mb-3">
-              <label for="editNombre" class="form-label">Nombre</label>
-              <input type="text" class="form-control" id="editNombre" required>
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title"><i class="bi bi-cart-plus me-2"></i>Nueva Reservación</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-0">
+          <form id="reservationForm" onsubmit="return false;">
+            <div class="p-3 border-bottom bg-light">
+              <div class="row g-2">
+                <div class="col-md-3">
+                  <label class="form-label small mb-0">Cliente *</label>
+                  <input type="text" class="form-control form-control-sm" id="resCliente" required>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small mb-0">Teléfono</label>
+                  <input type="tel" class="form-control form-control-sm" id="resTelefono">
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small mb-0">Email</label>
+                  <input type="email" class="form-control form-control-sm" id="resEmail">
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small mb-0">Salón *</label>
+                  <select class="form-select form-select-sm" id="resSalon" required onchange="onSalonChange()">
+                    <option value="">—</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small mb-0">Personas *</label>
+                  <input type="number" class="form-control form-control-sm" id="resPersonas" min="1" required>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small mb-0">Fecha *</label>
+                  <input type="date" class="form-control form-control-sm" id="resFecha" required>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small mb-0">Inicio *</label>
+                  <input type="time" class="form-control form-control-sm" id="resHoraIni" required>
+                </div>
+                <div class="col-md-2">
+                  <label class="form-label small mb-0">Fin *</label>
+                  <input type="time" class="form-control form-control-sm" id="resHoraFin" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small mb-0">Notas</label>
+                  <input type="text" class="form-control form-control-sm" id="resNotas">
+                </div>
+              </div>
             </div>
-            <div class="mb-3">
-              <label for="editEmail" class="form-label">Email</label>
-              <input type="email" class="form-control" id="editEmail" required>
+          </form>
+
+          <div class="p-3 border-bottom bg-white">
+            <h6 class="mb-2"><i class="bi bi-balloon me-1"></i>Inflables</h6>
+            <div id="resInflables" class="d-flex flex-wrap gap-2">
+              <small class="text-muted">Selecciona un salón primero</small>
             </div>
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-primary">Guardar</button>
+
+          <div class="row g-0" style="min-height:420px;">
+            <div class="col-md-7 border-end">
+              <ul class="nav nav-tabs px-3 pt-2" id="catalogTabs">
+                <li class="nav-item"><a class="nav-link active" data-tab="pizza" href="#">🍕 Pizzas</a></li>
+                <li class="nav-item"><a class="nav-link" data-tab="hamburguesa" href="#">🍔 Hamburguesas</a></li>
+                <li class="nav-item"><a class="nav-link" data-tab="bebida" href="#">🥤 Bebidas</a></li>
+                <li class="nav-item"><a class="nav-link" data-tab="malteada" href="#">🥛 Malteadas</a></li>
+              </ul>
+              <div class="p-3" id="catalogContent" style="max-height:380px; overflow-y:auto;">
+                <small class="text-muted">Cargando catálogo...</small>
+              </div>
+            </div>
+
+            <div class="col-md-5 bg-light d-flex flex-column">
+              <div class="p-3 border-bottom bg-white">
+                <h6 class="mb-0"><i class="bi bi-cart3 me-1"></i>Carrito <span class="badge bg-primary" id="cartCount">0</span></h6>
+              </div>
+              <div class="flex-grow-1 p-2" id="cartItems" style="overflow-y:auto; max-height:280px;">
+                <div class="text-center text-muted py-4 small">Sin productos</div>
+              </div>
+              <div class="p-3 border-top bg-white">
+                <div class="d-flex justify-content-between small"><span>Salón:</span><span id="sumSalon">$0.00</span></div>
+                <div class="d-flex justify-content-between small"><span>Inflables:</span><span id="sumInflables">$0.00</span></div>
+                <div class="d-flex justify-content-between small"><span>Productos:</span><span id="sumProductos">$0.00</span></div>
+                <hr class="my-1">
+                <div class="d-flex justify-content-between fw-bold fs-5">
+                  <span>TOTAL:</span><span class="text-success">$<span id="resTotal">0.00</span></span>
+                </div>
+              </div>
+            </div>
           </div>
-        </form>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="button" class="btn btn-primary" onclick="submitReservation()">
+            <i class="bi bi-check-circle me-1"></i>Guardar reservación
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- MODAL ELIMINAR -->
-  <div class="modal fade" id="deleteModal" tabindex="-1">
+  <!-- ================= MODAL PERSONALIZAR HAMBURGUESA ================= -->
+  <div class="modal fade" id="customizeModal" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Confirmar eliminación</h5>
+          <h5 class="modal-title" id="custTitle">Personalizar</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          ¿Seguro que quieres eliminar a <strong id="deleteNombre"></strong>?
-          <input type="hidden" id="deleteId">
+          <p class="text-muted small mb-2">Toca los ingredientes para <strong class="text-danger">quitar</strong> o <strong class="text-success">agregar</strong>.</p>
+          <div id="custIngredients" class="d-flex flex-wrap gap-2"></div>
+          <div class="mt-3">
+            <label class="form-label small">Notas especiales</label>
+            <input type="text" class="form-control form-control-sm" id="custNotes" placeholder="Ej: sin cebolla...">
+          </div>
+          <div class="mt-3">
+            <label class="form-label small">Cantidad</label>
+            <div class="input-group input-group-sm" style="max-width:140px;">
+              <button type="button" class="btn btn-outline-secondary" onclick="custQty(-1)">−</button>
+              <input type="number" class="form-control text-center" id="custQty" value="1" min="1">
+              <button type="button" class="btn btn-outline-secondary" onclick="custQty(1)">+</button>
+            </div>
+          </div>
+          <div class="alert alert-info mt-3 mb-0 py-2 small">
+            Precio unitario: <strong id="custPrice">$0.00</strong>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar</button>
+          <button type="button" class="btn btn-success" onclick="confirmCustomize()">
+            <i class="bi bi-cart-plus"></i> Agregar al carrito
+          </button>
         </div>
       </div>
     </div>
   </div>
 
- <script src="js/bootstrap.bundle.min.js"></script>
+  <script src="js/bootstrap.bundle.min.js"></script>
   <script>
-      const originalFetch = window.fetch;
-    window.fetch = async (...args) => {
-      const response = await originalFetch(...args);
-      if (response.status === 401) {
-        alert('Tu sesión ha finalizado o ha sido cerrada por un administrador.');
-        window.location.replace('/');
-      }
-      return response;
-    };
-    const tbody = document.getElementById('usersTableBody');
-    const sessionsList = document.getElementById('sessionsList');
     const alertBox = document.getElementById('alertBox');
-    const editModal = new bootstrap.Modal(document.getElementById('editModal'));
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const reservationModal = new bootstrap.Modal(document.getElementById('reservationModal'));
+    const customizeModal = new bootstrap.Modal(document.getElementById('customizeModal'));
 
     let currentUser = null;
+    let catalogSalones = [];
+    let catalogInflables = [];
+    let catalogPlatillos = [];
+    let catalogIngredientes = [];
+    let cart = [];
+    let currentCustomize = null;
 
     function showAlert(message, type = 'success') {
       alertBox.className = `alert alert-${type}`;
@@ -173,277 +308,584 @@
       alertBox.classList.remove('d-none');
       setTimeout(() => alertBox.classList.add('d-none'), 3000);
     }
-    
 
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
 
+    function fmtMoney(val) {
+      return Number(val || 0).toFixed(2);
+    }
 
     async function checkAuth() {
       try {
         const res = await fetch('/profile', { credentials: 'same-origin' });
         const data = await res.json();
-        if (!data.success) { window.location.href = '/'; return null; }
-        if (!data.user.is_admin) { alert('Acceso denegado'); return null; }
+        if (!data.success || !data.user.is_admin) { window.location.href = '/'; return null; }
         currentUser = data.user;
         document.getElementById('currentUser').textContent = data.user.nombre;
         return data.user;
       } catch (err) {
-        console.error('Error al validar sesión:', err);
         window.location.href = '/';
         return null;
       }
     }
 
-    // ============ USUARIOS ============
-    async function loadUsers() {
+    // ================= RESERVACIONES & POS =================
+    async function loadReservaciones() {
       try {
-        const res = await fetch('/users', { credentials: 'same-origin' });
+        const res = await fetch('/api/reservaciones', { credentials: 'same-origin' });
         const data = await res.json();
-        if (!data.success) { showAlert(data.message, 'danger'); return; }
-
+        const tbody = document.getElementById('reservacionesTableBody');
+        if (!tbody) return;
+        
         tbody.innerHTML = '';
-        data.users.forEach(user => {
-          const isMe = user.id === currentUser.id;
-          const rolBadge = user.is_admin
-            ? '<span class="badge bg-warning text-dark">ADMIN</span>'
-            : '<span class="badge bg-secondary">Usuario</span>';
-
-          const adminBtn = isMe ? '<span class="text-muted small">(tú)</span>'
-            : `<button class="btn btn-sm ${user.is_admin ? 'btn-outline-warning' : 'btn-outline-success'} me-1"
-                 onclick="toggleAdmin(${user.id}, ${user.is_admin ? 'false' : 'true'}, '${user.nombre.replace(/'/g, "\\'")}')"
-                 title="${user.is_admin ? 'Quitar admin' : 'Hacer admin'}">
-                 <i class="bi bi-shield-${user.is_admin ? 'x' : 'check'}"></i>
-               </button>`;
-
-          const closeSessionsBtn = isMe ? ''
-            : `<button class="btn btn-sm btn-outline-danger me-1"
-                 onclick="closeUserSessions(${user.id}, '${user.nombre.replace(/'/g, "\\'")}')"
-                 title="Cerrar todas sus sesiones">
-                 <i class="bi bi-x-circle"></i>
-               </button>`;
-
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${user.id}</td>
-            <td>${user.nombre}</td>
-            <td>${user.email}</td>
-            <td>${rolBadge}</td>
-            <td>${new Date(user.created_at).toLocaleDateString()}</td>
-            <td class="text-end">
-              ${adminBtn}
-              ${closeSessionsBtn}
-              <button class="btn btn-sm btn-primary me-1" onclick="openEdit(${user.id}, '${user.nombre.replace(/'/g, "\\'")}', '${user.email}')">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-sm btn-danger" ${isMe ? 'disabled' : ''} onclick="openDelete(${user.id}, '${user.nombre.replace(/'/g, "\\'")}')">
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (err) {
-        console.error(err);
-        showAlert('Error al cargar usuarios', 'danger');
-      }
-    }
-
-    // ============ SESIONES ============
-    async function loadSessions() {
-      try {
-        const res = await fetch('/sessions', { credentials: 'same-origin' });
-        const data = await res.json();
-        if (!data.success) { showAlert(data.message, 'danger'); return; }
-
-        sessionsList.innerHTML = '';
-
-        if (!data.sessions || data.sessions.length === 0) {
-          sessionsList.innerHTML = '<div class="col-12 text-center text-muted py-4">No hay sesiones activas</div>';
+        if (!data.success || !data.reservaciones.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No hay reservaciones registradas</td></tr>';
           return;
         }
 
-        data.sessions.forEach(s => {
-          const isMe = s.sid === document.cookie.match(/connect\.sid=([^;]+)/)?.[1];
-          const exp = new Date(s.expired);
-          const mins = Math.max(0, Math.round((exp - Date.now()) / 60000));
-
-          const card = document.createElement('div');
-          card.className = 'col-md-6 col-lg-4';
-          card.innerHTML = `
-            <div class="card session-card shadow-sm">
-              <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                  <h6 class="card-title mb-0">
-                    <i class="bi bi-person-circle me-1"></i>
-                    ${s.user.nombre}
-                    ${isMe ? '<span class="badge bg-info text-dark ms-1">TÚ</span>' : ''}
-                  </h6>
-                  ${s.user.is_admin ? '<span class="badge bg-warning text-dark">ADMIN</span>' : ''}
-                </div>
-                <p class="text-muted mb-1"><small>${s.user.email}</small></p>
-                <p class="mb-1"><small><i class="bi bi-hdd-network me-1"></i>IP: ${s.ip || 'N/A'}</small></p>
-                <p class="mb-1"><small><i class="bi bi-clock me-1"></i>Login: ${s.loginAt ? new Date(s.loginAt).toLocaleString() : 'N/A'}</small></p>
-                <p class="mb-2"><small><i class="bi bi-hourglass-split me-1"></i>Expira en: ${mins} min</small></p>
-                <p class="text-muted mb-2" style="font-size:.75rem; word-break:break-all;">
-                  <i class="bi bi-browser-chrome me-1"></i>${(s.userAgent || 'N/A').substring(0, 80)}...
-                </p>
-                <button class="btn btn-sm btn-danger w-100" onclick="closeSession('${s.sid}', '${s.user.nombre.replace(/'/g, "\\'")}')">
-                  <i class="bi bi-x-circle me-1"></i>Cerrar esta sesión
+        data.reservaciones.forEach(r => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${r.id}</td>
+              <td><strong>${escapeHtml(r.cliente_nombre)}</strong></td>
+              <td>${escapeHtml(r.cliente_telefono || '-')}</td>
+              <td><span class="badge bg-info text-dark">${escapeHtml(r.salon_nombre || 'Salón')}</span></td>
+              <td>${r.fecha} (${r.hora_inicio} - ${r.hora_fin})</td>
+              <td><span class="badge bg-warning text-dark">${escapeHtml(r.estado)}</span></td>
+              <td class="fw-bold text-success">$${fmtMoney(r.total)}</td>
+              <td class="text-center">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteReservation(${r.id})" title="Eliminar reservación">
+                  <i class="bi bi-trash"></i>
                 </button>
-              </div>
-            </div>
-          `;
-          sessionsList.appendChild(card);
+              </td>
+            </tr>`;
         });
       } catch (err) {
-        console.error(err);
-        showAlert('Error al cargar sesiones', 'danger');
+        console.error('Error cargando reservaciones:', err);
       }
     }
+    window.loadReservaciones = loadReservaciones;
 
-    // ============ ACCIONES ============
-    window.openEdit = (id, nombre, email) => {
-      document.getElementById('editId').value = id;
-      document.getElementById('editNombre').value = nombre;
-      document.getElementById('editEmail').value = email;
-      editModal.show();
-    };
+    async function deleteReservation(id) {
+      if (!confirm(`¿Estás seguro de que deseas eliminar la reservación #${id}?`)) return;
 
-    window.openDelete = (id, nombre) => {
-      document.getElementById('deleteId').value = id;
-      document.getElementById('deleteNombre').textContent = nombre;
-      deleteModal.show();
-    };
-
-    window.toggleAdmin = async (id, is_admin, nombre) => {
-      const accion = is_admin ? 'hacer admin' : 'quitar admin';
-      if (!confirm(`¿Seguro que quieres ${accion} a "${nombre}"?`)) return;
-      const res = await fetch(`/users/${id}/admin`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_admin }),
-        credentials: 'same-origin'
-      });
-      const data = await res.json();
-      showAlert(data.message, data.success ? 'success' : 'danger');
-      if (data.success) loadUsers();
-    };
-
-    window.closeSession = async (sid, nombre) => {
-      if (!confirm(`¿Cerrar la sesión de "${nombre}"?`)) return;
       try {
-        const res = await fetch(`/sessions/${encodeURIComponent(sid)}`, { 
+        const res = await fetch(`/api/reservaciones/${id}`, {
           method: 'DELETE',
           credentials: 'same-origin'
         });
         const data = await res.json();
-        showAlert(data.message, data.success ? 'success' : 'danger');
+
         if (data.success) {
-          loadSessions(); // Vuelve a consultar la lista
+          showAlert('Reservación eliminada con éxito', 'success');
+          loadReservaciones();
+          loadContaduria();
+        } else {
+          showAlert(data.message || 'Error al eliminar', 'danger');
         }
       } catch (err) {
         console.error(err);
-        showAlert('Error de conexión al cerrar sesión', 'danger');
-      }
-    };
-
-    window.closeUserSessions = async (id, nombre) => {
-      if (!confirm(`¿Cerrar TODAS las sesiones de "${nombre}"?`)) return;
-      const res = await fetch(`/users/${id}/sessions`, { 
-        method: 'DELETE',
-        credentials: 'same-origin'
-      });
-      const data = await res.json();
-      showAlert(data.message, data.success ? 'success' : 'danger');
-    };
-
-    document.getElementById('editForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = document.getElementById('editId').value;
-      const nombre = document.getElementById('editNombre').value;
-      const email = document.getElementById('editEmail').value;
-      const res = await fetch(`/users/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, email }),
-        credentials: 'same-origin'
-      });
-      const data = await res.json();
-      if (data.success) { editModal.hide(); showAlert('Usuario actualizado'); loadUsers(); }
-      else showAlert(data.message, 'danger');
-    });
-
-    document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
-      const id = document.getElementById('deleteId').value;
-      const res = await fetch(`/users/${id}`, { 
-        method: 'DELETE',
-        credentials: 'same-origin'
-      });
-      const data = await res.json();
-      if (data.success) { deleteModal.hide(); showAlert('Usuario eliminado'); loadUsers(); }
-      else showAlert(data.message, 'danger');
-    });
-
-    // ============ LOGOUT ============
-    async function handleLogout(e) {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-      try {
-        await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
-      } catch (err) {
-        console.error('Error en logout:', err);
-      } finally {
-        window.location.replace('/?logout=1');
+        showAlert('Error de conexión al eliminar', 'danger');
       }
     }
+    window.deleteReservation = deleteReservation;
 
+    async function openNewReservation() {
+      try {
+        if (catalogSalones.length === 0) {
+          const [rs, ri, rp, ring] = await Promise.all([
+            fetch('/salones', { credentials: 'same-origin' }).then(r => r.json()),
+            fetch('/inflables', { credentials: 'same-origin' }).then(r => r.json()),
+            fetch('/platillos', { credentials: 'same-origin' }).then(r => r.json()),
+            fetch('/ingredientes', { credentials: 'same-origin' }).then(r => r.json())
+          ]);
+          catalogSalones      = rs.salones || [];
+          catalogInflables    = ri.inflables || [];
+          catalogPlatillos    = rp.catalogo || [];
+          catalogIngredientes = ring.ingredientes || [];
+        }
+
+        const sel = document.getElementById('resSalon');
+        sel.innerHTML = '<option value="">—</option>';
+        catalogSalones.forEach(s => {
+          sel.innerHTML += `<option value="${s.id}" data-cap="${s.capacidad}" data-maxinf="${s.max_inflables}" data-precio="${s.precio_base}">${s.nombre} (cap. ${s.capacidad})</option>`;
+        });
+
+        document.getElementById('reservationForm')?.reset?.();
+        ['resCliente','resTelefono','resEmail','resPersonas','resFecha','resHoraIni','resHoraFin','resNotas']
+          .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+        document.getElementById('resInflables').innerHTML = '<small class="text-muted">Selecciona un salón primero</small>';
+        cart = [];
+        renderCart();
+        renderCatalogTab('pizza');
+
+        reservationModal.show();
+      } catch (err) {
+        console.error(err);
+        showAlert('Error al cargar catálogos', 'danger');
+      }
+    }
+    window.openNewReservation = openNewReservation;
+
+    function onSalonChange() {
+      const sel = document.getElementById('resSalon');
+      const opt = sel.options[sel.selectedIndex];
+      const maxInf = opt ? parseInt(opt.dataset.maxinf || '0') : 0;
+      const box = document.getElementById('resInflables');
+
+      if (!sel.value) {
+        box.innerHTML = '<small class="text-muted">Selecciona un salón primero</small>';
+        updateTotals();
+        return;
+      }
+
+      box.innerHTML = '';
+      catalogInflables.forEach(inf => {
+        box.innerHTML += `
+          <div class="form-check form-check-inline border rounded px-3 py-1 bg-white">
+            <input class="form-check-input inf-check" type="checkbox" id="inf_${inf.id}" value="${inf.id}"
+                   data-precio="${inf.precio}" onchange="onInflableChange(${maxInf})">
+            <label class="form-check-label small" for="inf_${inf.id}">
+              ${escapeHtml(inf.nombre)} — $${fmtMoney(inf.precio)}
+            </label>
+          </div>`;
+      });
+      updateTotals();
+    }
+    window.onSalonChange = onSalonChange;
+
+    function onInflableChange(maxInf) {
+      const checks = document.querySelectorAll('.inf-check:checked');
+      if (checks.length > maxInf) {
+        checks[checks.length - 1].checked = false;
+        alert(`Este salón solo permite ${maxInf} inflable(s).`);
+      }
+      updateTotals();
+    }
+    window.onInflableChange = onInflableChange;
+
+    function renderCatalogTab(cat) {
+      const box = document.getElementById('catalogContent');
+      const platos = catalogPlatillos.filter(p => p.categoria === cat);
+      if (!platos.length) { box.innerHTML = '<small class="text-muted">Sin productos</small>'; return; }
+
+      box.innerHTML = '';
+      platos.forEach(p => {
+        box.innerHTML += `<h6 class="text-capitalize text-muted small mt-2">${escapeHtml(p.nombre)}</h6>`;
+        p.variantes.forEach(v => {
+          box.innerHTML += `
+            <div class="d-flex justify-content-between align-items-center border rounded p-2 mb-2 bg-white">
+              <div>
+                <strong>${escapeHtml(v.nombre)}</strong>
+                ${v.ingredientes ? `<br><small class="text-muted">${escapeHtml(v.ingredientes)}</small>` : ''}
+              </div>
+              <div class="text-end">
+                <div class="fw-bold text-success mb-1">$${fmtMoney(v.precio)}</div>
+                ${p.categoria === 'hamburguesa'
+                  ? `<button type="button" class="btn btn-sm btn-warning" onclick="openCustomize(${v.id})"><i class="bi bi-sliders"></i> Personalizar</button>`
+                  : `<button type="button" class="btn btn-sm btn-success" onclick="quickAdd(${v.id}, '${p.categoria}',${v.precio})"><i class="bi bi-plus-lg"></i> Agregar</button>`}
+              </div>
+            </div>`;
+        });
+      });
+    }
+    window.renderCatalogTab = renderCatalogTab;
+
+    document.querySelectorAll('#catalogTabs .nav-link').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('#catalogTabs .nav-link').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        renderCatalogTab(tab.dataset.tab);
+      });
+    });
+
+    function quickAdd(varianteId, categoria, precio) {
+      let variante = null;
+      catalogPlatillos.forEach(p => p.variantes.forEach(v => { if (Number(v.id) === Number(varianteId)) variante = v; }));
+      if (!variante) return;
+      cart.push({
+        variante_id: varianteId,
+        nombre: variante.nombre,
+        categoria,
+        precio: Number(precio),
+        cantidad: 1,
+        quitados: [],
+        agregados: [],
+        notas: ''
+      });
+      renderCart();
+    }
+    window.quickAdd = quickAdd;
+
+    async function openCustomize(varianteId) {
+      try {
+        let platilloId = null, variante = null;
+        catalogPlatillos.forEach(p => {
+          p.variantes.forEach(v => {
+            if (Number(v.id) === Number(varianteId)) {
+              platilloId = p.id;
+              variante = v;
+            }
+          });
+        });
+
+        if (!variante || !platilloId) {
+          return showAlert('No se encontró la variante seleccionada', 'danger');
+        }
+
+        const res = await fetch(`/platillos/${platilloId}/variantes`, { credentials: 'same-origin' });
+        const data = await res.json();
+        const vFull = data.variantes.find(x => Number(x.id) === Number(varianteId));
+        if (!vFull) return;
+
+        currentCustomize = { variante: vFull, quitados: new Set(), agregados: new Set() };
+
+        document.getElementById('custTitle').textContent = `Personalizar ${vFull.nombre}`;
+        document.getElementById('custNotes').value = '';
+        document.getElementById('custQty').value = 1;
+
+        const ingsBox = document.getElementById('custIngredients');
+        ingsBox.innerHTML = '';
+
+        vFull.ingredientes_default.forEach(ing => {
+          ingsBox.innerHTML += `
+            <button type="button" class="btn btn-sm btn-success ing-toggle" data-id="${ing.id}" data-default="1" onclick="toggleIng(this)">
+              <i class="bi bi-check-circle"></i> ${escapeHtml(ing.nombre)}
+            </button>`;
+        });
+
+        const idsDefault = vFull.ingredientes_default.map(i => i.id);
+        catalogIngredientes.filter(i => i.categoria === 'hamburguesa' && !idsDefault.includes(i.id)).forEach(ing => {
+          ingsBox.innerHTML += `
+            <button type="button" class="btn btn-sm btn-outline-secondary ing-toggle" data-id="${ing.id}" data-default="0" data-extra="${ing.precio_extra}" onclick="toggleIng(this)">
+              <i class="bi bi-plus-circle"></i> ${escapeHtml(ing.nombre)} ${Number(ing.precio_extra) > 0 ? ` (+$${fmtMoney(ing.precio_extra)})` : ''}
+            </button>`;
+        });
+
+        updateCustPrice();
+        customizeModal.show();
+      } catch (err) {
+        console.error(err);
+        showAlert('Error al abrir personalización', 'danger');
+      }
+    }
+    window.openCustomize = openCustomize;
+
+    function toggleIng(btn) {
+      const id = parseInt(btn.dataset.id);
+      const esDefault = btn.dataset.default === '1';
+
+      if (esDefault) {
+        if (currentCustomize.quitados.has(id)) {
+          currentCustomize.quitados.delete(id);
+          btn.classList.add('btn-success'); btn.classList.remove('btn-danger');
+          btn.innerHTML = `<i class="bi bi-check-circle"></i> ${btn.textContent.trim().replace(/^[^\s]+\s/, '')}`;
+        } else {
+          currentCustomize.quitados.add(id);
+          btn.classList.remove('btn-success'); btn.classList.add('btn-danger');
+          btn.innerHTML = `<i class="bi bi-x-circle"></i> ${btn.textContent.trim().replace(/^[^\s]+\s/, '')}`;
+        }
+      } else {
+        if (currentCustomize.agregados.has(id)) {
+          currentCustomize.agregados.delete(id);
+          btn.classList.remove('btn-success'); btn.classList.add('btn-outline-secondary');
+        } else {
+          currentCustomize.agregados.add(id);
+          btn.classList.add('btn-success'); btn.classList.remove('btn-outline-secondary');
+        }
+      }
+      updateCustPrice();
+    }
+    window.toggleIng = toggleIng;
+
+    function updateCustPrice() {
+      let precio = Number(currentCustomize.variante.precio);
+      currentCustomize.agregados.forEach(id => {
+        const ing = catalogIngredientes.find(i => Number(i.id) === Number(id));
+        if (ing) precio += Number(ing.precio_extra || 0);
+      });
+      const qty = parseInt(document.getElementById('custQty').value) || 1;
+      document.getElementById('custPrice').textContent = `$${fmtMoney(precio)} (x${qty} = $${fmtMoney(precio * qty)})`;
+    }
+    window.updateCustPrice = updateCustPrice;
+
+    function custQty(delta) {
+      const inp = document.getElementById('custQty');
+      inp.value = Math.max(1, (parseInt(inp.value) || 1) + delta);
+      updateCustPrice();
+    }
+    window.custQty = custQty;
+
+    function confirmCustomize() {
+      const qty = parseInt(document.getElementById('custQty').value) || 1;
+      const notas = document.getElementById('custNotes').value;
+      const v = currentCustomize.variante;
+
+      cart.push({
+        variante_id: v.id,
+        nombre: v.nombre,
+        categoria: 'hamburguesa',
+        precio: Number(v.precio),
+        cantidad: qty,
+        quitados: [...currentCustomize.quitados],
+        agregados: [...currentCustomize.agregados],
+        notas
+      });
+
+      const custModalEl = document.getElementById('customizeModal');
+      const modalInstance = bootstrap.Modal.getInstance(custModalEl);
+      if (modalInstance) {
+        modalInstance.hide();
+      }
+
+      renderCart();
+    }
+    window.confirmCustomize = confirmCustomize;
+
+    function renderCart() {
+      const box = document.getElementById('cartItems');
+      const count = cart.reduce((s, l) => s + l.cantidad, 0);
+      document.getElementById('cartCount').textContent = count;
+
+      if (!cart.length) {
+        box.innerHTML = '<div class="text-center text-muted py-4 small">Sin productos</div>';
+        updateTotals();
+        return;
+      }
+
+      box.innerHTML = '';
+      cart.forEach((line, idx) => {
+        let detalles = '';
+        if (line.quitados && line.quitados.length) {
+          const nombres = line.quitados.map(id => catalogIngredientes.find(i => Number(i.id) === Number(id))?.nombre).filter(Boolean);
+          detalles += `<div class="text-danger small">Sin: ${nombres.join(', ')}</div>`;
+        }
+        if (line.agregados && line.agregados.length) {
+          const nombres = line.agregados.map(id => catalogIngredientes.find(i => Number(i.id) === Number(id))?.nombre).filter(Boolean);
+          detalles += `<div class="text-success small">Extra: ${nombres.join(', ')}</div>`;
+        }
+        if (line.notas) detalles += `<div class="text-muted small fst-italic">"${escapeHtml(line.notas)}"</div>`;
+
+        let precioLinea = Number(line.precio);
+        if (line.agregados) {
+          line.agregados.forEach(id => {
+            const ing = catalogIngredientes.find(i => Number(i.id) === Number(id));
+            if (ing) precioLinea += Number(ing.precio_extra || 0);
+          });
+        }
+        const subtotal = precioLinea * Number(line.cantidad || 1);
+
+        box.innerHTML += `
+          <div class="card mb-2 border-0 shadow-sm">
+            <div class="card-body p-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1"><strong class="small">${escapeHtml(line.nombre)}</strong>${detalles}</div>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1" onclick="removeCartItem(${idx})"><i class="bi bi-x-circle"></i></button>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-1">
+                <div class="btn-group btn-group-sm">
+                  <button type="button" class="btn btn-outline-secondary" onclick="changeQty(${idx}, -1)">−</button>
+                  <button type="button" class="btn btn-outline-secondary" disabled>${line.cantidad}</button>
+                  <button type="button" class="btn btn-outline-secondary" onclick="changeQty(${idx}, 1)">+</button>
+                </div>
+                <span class="fw-bold small text-success">$${fmtMoney(subtotal)}</span>
+              </div>
+            </div>
+          </div>`;
+      });
+      updateTotals();
+    }
+    window.renderCart = renderCart;
+
+    function removeCartItem(idx) { cart.splice(idx, 1); renderCart(); }
+    window.removeCartItem = removeCartItem;
+    function changeQty(idx, delta) { cart[idx].cantidad = Math.max(1, (Number(cart[idx].cantidad) || 1) + delta); renderCart(); }
+    window.changeQty = changeQty;
+
+    function updateTotals() {
+      const sel = document.getElementById('resSalon');
+      const opt = sel.options[sel.selectedIndex];
+      const totalSalon = opt && sel.value ? parseFloat(opt.dataset.precio || '0') : 0;
+
+      let totalInflables = 0;
+      document.querySelectorAll('.inf-check:checked').forEach(c => {
+        totalInflables += parseFloat(c.dataset.precio || '0');
+      });
+
+      let totalProductos = 0;
+      cart.forEach(line => {
+        let precioBaseLinea = Number(line.precio);
+        if (line.agregados && Array.isArray(line.agregados)) {
+          line.agregados.forEach(id => {
+            const ing = catalogIngredientes.find(i => Number(i.id) === Number(id));
+            if (ing) precioBaseLinea += Number(ing.precio_extra || 0);
+          });
+        }
+        totalProductos += precioBaseLinea * Number(line.cantidad || 1);
+      });
+
+      document.getElementById('sumSalon').textContent     = '$' + fmtMoney(totalSalon);
+      document.getElementById('sumInflables').textContent = '$' + fmtMoney(totalInflables);
+      document.getElementById('sumProductos').textContent = '$' + fmtMoney(totalProductos);
+      document.getElementById('resTotal').textContent     = fmtMoney(totalSalon + totalInflables + totalProductos);
+    }
+    window.updateTotals = updateTotals;
+
+    async function submitReservation() {
+      const salon_id = document.getElementById('resSalon').value;
+      const cliente_nombre = document.getElementById('resCliente').value;
+      const fecha = document.getElementById('resFecha').value;
+      const hora_inicio = document.getElementById('resHoraIni').value;
+      const hora_fin = document.getElementById('resHoraFin').value;
+      const num_personas = document.getElementById('resPersonas').value;
+
+      if (!salon_id)     return showAlert('Selecciona un salón', 'danger');
+      if (!cliente_nombre) return showAlert('Falta el cliente', 'danger');
+      if (!fecha)        return showAlert('Falta la fecha', 'danger');
+      if (!hora_inicio)  return showAlert('Falta hora de inicio', 'danger');
+      if (!hora_fin)     return showAlert('Falta hora de fin', 'danger');
+      if (!num_personas) return showAlert('Falta número de personas', 'danger');
+
+      const inflables = [...document.querySelectorAll('.inf-check:checked')].map(c => ({
+        inflable_id: parseInt(c.value),
+        cantidad: 1
+      }));
+
+      const payload = {
+        cliente_nombre,
+        cliente_telefono: document.getElementById('resTelefono').value,
+        cliente_email: document.getElementById('resEmail').value,
+        salon_id: parseInt(salon_id),
+        fecha,
+        hora_inicio,
+        hora_fin,
+        num_personas: parseInt(num_personas),
+        notas: document.getElementById('resNotas').value,
+        inflables,
+        platillos: cart
+      };
+
+      try {
+        const res = await fetch('/reservaciones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'same-origin'
+        });
+        const data = await res.json();
+        if (data.success) {
+          showAlert('¡Reservación creada con éxito!');
+          const modalEl = document.getElementById('reservationModal');
+          const modalInst = bootstrap.Modal.getInstance(modalEl);
+          if (modalInst) modalInst.hide();
+          loadReservaciones();
+          loadContaduria();
+        } else {
+          showAlert(data.message || 'Error al guardar', 'danger');
+        }
+      } catch (err) {
+        console.error(err);
+        showAlert('Error de conexión al guardar reservación', 'danger');
+      }
+    }
+    window.submitReservation = submitReservation;
+
+    // ================= SECCIONES DASHBOARD =================
+    async function loadContaduria() {
+      try {
+        const res = await fetch('/api/contaduria', { credentials: 'same-origin' });
+        const data = await res.json();
+        if (!data.success) return;
+        document.getElementById('totalGanancias').textContent = `$${fmtMoney(data.ganancias)}`;
+        const tbody = document.getElementById('contaduriaTableBody');
+        tbody.innerHTML = '';
+        if (!data.reservaciones.length) {
+          tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No hay registros</td></tr>';
+          return;
+        }
+        data.reservaciones.forEach(r => {
+          tbody.innerHTML += `<tr><td>${r.id}</td><td><strong>${escapeHtml(r.cliente_nombre)}</strong></td><td>${escapeHtml(r.cliente_telefono || '-')}</td><td>${r.fecha}</td><td><span class="badge bg-secondary">${r.estado}</span></td><td>$${fmtMoney(r.total_orden)}</td></tr>`;
+        });
+      } catch (err) { console.error(err); }
+    }
+
+    async function loadUsers() {
+      const res = await fetch('/users', { credentials: 'same-origin' });
+      const data = await res.json();
+      if (!data.success) return;
+      const tbody = document.getElementById('usersTableBody');
+      tbody.innerHTML = '';
+      data.users.forEach(u => {
+        tbody.innerHTML += `<tr><td>${u.id}</td><td>${escapeHtml(u.nombre)}</td><td>${escapeHtml(u.email)}</td><td>${u.is_admin ? 'Admin' : 'Usuario'}</td><td>${new Date(u.created_at).toLocaleDateString()}</td></tr>`;
+      });
+    }
+
+    async function loadSessions() {
+      const res = await fetch('/sessions', { credentials: 'same-origin' });
+      const data = await res.json();
+      if (!data.success) return;
+      const list = document.getElementById('sessionsList');
+      list.innerHTML = '';
+      if (!data.sessions.length) {
+        list.innerHTML = '<div class="col-12 text-center text-muted py-4">No hay sesiones activas</div>';
+        return;
+      }
+      data.sessions.forEach(s => {
+        list.innerHTML += `
+          <div class="col-md-6 col-lg-4">
+            <div class="card session-card shadow-sm">
+              <div class="card-body">
+                <h6 class="card-title">${escapeHtml(s.user.nombre)}</h6>
+                <p class="text-muted mb-1"><small>${escapeHtml(s.user.email)}</small></p>
+                <p class="mb-1"><small>IP: ${s.ip || 'N/A'}</small></p>
+                <button type="button" class="btn btn-sm btn-danger w-100 mt-2" onclick="closeSession('${s.sid}')"><i class="bi bi-x-circle me-1"></i>Cerrar sesión</button>
+              </div>
+            </div>
+          </div>`;
+      });
+    }
+
+    async function closeSession(sid) {
+      if (!confirm('¿Cerrar esta sesión?')) return;
+      await fetch(`/sessions/${encodeURIComponent(sid)}`, { method: 'DELETE', credentials: 'same-origin' });
+      loadSessions();
+    }
+    window.closeSession = closeSession;
+
+    async function handleLogout(e) {
+      e.preventDefault();
+      await fetch('/logout', { method: 'POST', credentials: 'same-origin' });
+      window.location.replace('/');
+    }
     document.getElementById('btnLogout').addEventListener('click', handleLogout);
     document.getElementById('btnLogoutSidebar').addEventListener('click', handleLogout);
 
-    // ============ NAVEGACIÓN ============
     document.querySelectorAll('.sidebar .nav-link[data-section]').forEach(link => {
       link.addEventListener('click', () => {
         const section = link.dataset.section;
-
         document.querySelectorAll('.sidebar .nav-link').forEach(l => l.classList.remove('active'));
         link.classList.add('active');
 
+        document.getElementById('section-reservaciones').classList.toggle('d-none', section !== 'reservaciones');
+        document.getElementById('section-contaduria').classList.toggle('d-none', section !== 'contaduria');
         document.getElementById('section-users').classList.toggle('d-none', section !== 'users');
         document.getElementById('section-sessions').classList.toggle('d-none', section !== 'sessions');
-        document.getElementById('sectionTitle').textContent =
-          section === 'users' ? 'Gestión de Usuarios' : 'Sesiones Activas';
 
+        const titles = { reservaciones: 'Gestión de Reservaciones', contaduria: 'Contaduría y Ganancias', users: 'Gestión de Usuarios', sessions: 'Sesiones Activas' };
+        document.getElementById('sectionTitle').textContent = titles[section];
+
+        if (section === 'reservaciones') loadReservaciones();
+        if (section === 'contaduria') loadContaduria();
+        if (section === 'users') loadUsers();
         if (section === 'sessions') loadSessions();
       });
     });
 
-    // ============ INIT ============
-    checkAuth().then(user => {
-      if (user) {
-        loadUsers();
-
-        // Auto-refresh de sesiones cada 30s si estamos en esa sección
-        setInterval(() => {
-          if (!document.getElementById('section-sessions').classList.contains('d-none')) {
-            loadSessions();
-          }
-        }, 30000);
-
-        // 2. HEARTBEAT: Comprueba cada 10s si la sesión sigue viva en MariaDB
-        setInterval(async () => {
-          try {
-            const res = await fetch('/profile', { credentials: 'same-origin' });
-            const data = await res.json();
-            if (!data.success) {
-              window.location.replace('/');
-            }
-          } catch (_) {
-            window.location.replace('/');
-          }
-        }, 10000);
-      }
-    });
+    checkAuth().then(user => { if (user) { loadReservaciones(); loadContaduria(); } });
   </script>
 </body>
 </html>

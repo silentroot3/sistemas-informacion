@@ -41,6 +41,24 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
+  web:
+    image: php:8.2-apache
+    container_name: php_web_local
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      - DB_HOST=db
+      - DB_USER=silentroot
+      - DB_PASSWORD=5252
+      - DB_NAME=info
+    command: >
+      bash -c "docker-php-ext-install pdo pdo_mysql && a2enmod rewrite && apache2-foreground"
+    depends_on:
+      db:
+        condition: service_healthy
+        
 volumes:
   db_data:

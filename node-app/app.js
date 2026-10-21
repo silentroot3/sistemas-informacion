@@ -21,9 +21,16 @@ const dbConfig = {
   queueLimit: 0
 };
 
-const pool = mysql.createPool(dbConfig);
+// Evitar que el servidor se caiga si la DB no responde
 
-// Knex para el store de sesiones (misma DB)
+const pool = mysql.createPool(dbConfig);
+	pool.on('error', (err) => {
+     console.error('Error en el pool de MySQL (reintentando):', err.code);
+});
+
+
+
+
 const knexInstance = knex({
   client: 'mysql2',
   connection: {
@@ -40,15 +47,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Store persistente en MariaDB
-
 const sessionStore = new KnexSessionStore({
   knex: knexInstance,
   tablename: 'sessions',
   createtable: true,
-  clearInterval: 1000 * 60 * 15 // limpia expiradas cada 15 min
+  clearInterval: 1000 * 60 * 15
 });
-
 
 app.use(session({
   store: sessionStore,
@@ -56,7 +60,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    maxAge: 30 * 60 * 1000, //  30 min de inactividad
+    maxAge: 30 * 60 * 1000,
     httpOnly: true
   }
 }));
@@ -100,7 +104,6 @@ async function initDB(retries = 10) {
 
       try {
         await conn.execute(`ALTER TABLE usuarios ADD COLUMN is_admin TINYINT(1) NOT NULL DEFAULT 0`);
-        console.log(' Columna is_admin agregada');
       } catch (_) {}
 
       const [rows] = await conn.execute('SELECT COUNT(*) AS count FROM usuarios');
@@ -110,7 +113,7 @@ async function initDB(retries = 10) {
           'INSERT INTO usuarios (nombre, email, password, is_admin) VALUES (?, ?, ?, 1)',
           ['Admin', 'admin@test.com', hashed]
         );
-        console.log('Admin creado: admin@test.com / 123456');
+        console.log('Admin creado por defecto: admin@test.com / 123456');
       }
 
       conn.release();
@@ -121,14 +124,12 @@ async function initDB(retries = 10) {
       await new Promise((r) => setTimeout(r, 3000));
     }
   }
-  console.error(' No se pudo inicializar la DB');
+  console.error('No se pudo inicializar la DB');
 }
 
 initDB();
 
-// ==================== RUTAS API ====================
-
-// 1. REGISTRO
+// ==================== RUTAS DE AUTENTICACIÓN ====================
 app.post('/register', async (req, res) => {
   const { nombre, email, password } = req.body;
   if (!nombre || !email || !password) return res.json({ success: false, message: 'Faltan datos' });
@@ -147,11 +148,10 @@ app.post('/register', async (req, res) => {
 
     res.json({ success: true, message: 'Usuario registrado' });
   } catch (error) {
-    console.error('Error /register:', error);
     res.status(500).json({ success: false, message: 'Error en el servidor' });
   }
 });
-// 2. LOGIN
+
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.json({ success: false, message: 'Email y password requeridos' });
@@ -168,7 +168,6 @@ app.post('/login', async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.json({ success: false, message: 'Contraseña incorrecta' });
 
-    // Guardar datos en sesión
     req.session.user = {
       id: user.id,
       nombre: user.nombre,
@@ -179,32 +178,19 @@ app.post('/login', async (req, res) => {
     req.session.ip = req.ip;
     req.session.userAgent = req.headers['user-agent'];
 
-    // 🔑 FORZAR guardado en el store ANTES de responder
     req.session.save((err) => {
-      if (err) {
-        console.error('Error guardando sesión:', err);
-        return res.status(500).json({ success: false, message: 'Error al guardar sesión' });
-      }
-      console.log('Sesión guardada en DB:', req.sessionID);
+      if (err) return res.status(500).json({ success: false, message: 'Error al guardar sesión' });
       res.json({ success: true, message: 'Login exitoso', user: req.session.user });
     });
-
   } catch (error) {
-    console.error('Error /login:', error);
     res.status(500).json({ success: false, message: 'Error en el servidor' });
   }
 });
 
-
-
-
-
-// 3. VERIFICAR SESIÓN
 app.get('/profile', requireAuth, (req, res) => {
   res.json({ success: true, user: req.session.user });
 });
 
-// 4. LOGOUT
 app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
     if (err) return res.status(500).json({ success: false, message: 'Error al cerrar sesión' });
@@ -213,178 +199,219 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// 5. INFO API
-app.get('/api', (req, res) => {
-  res.json({
-    message: 'API de Login Simple',
-    rutas: {
-      'POST /register': 'Registrar usuario',
-      'POST /login': 'Iniciar sesión',
-      'GET /profile': 'Ver perfil',
-      'POST /logout': 'Cerrar sesión',
-      'GET /users': 'Listar usuarios (admin)',
-      'PUT /users/:id': 'Actualizar usuario (admin)',
-      'DELETE /users/:id': 'Eliminar usuario (admin)',
-      'PUT /users/:id/admin': 'Cambiar rol admin (admin)',
-      'GET /sessions': 'Ver sesiones activas (admin)',
-      'DELETE /sessions/:sid': 'Cerrar una sesión (admin)',
-      'DELETE /users/:id/sessions': 'Cerrar todas las sesiones de un usuario (admin)'
-    }
-  });
+// ==================== CATÁLOGOS PARA EL POS ====================
+app.get('/salones', requireAuth, async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM salones WHERE activo = 1');
+  res.json({ success: true, salones: rows });
 });
 
-// ==================== RUTAS SOLO ADMIN ====================
+app.get('/inflables', requireAuth, async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM inflables WHERE activo = 1');
+  res.json({ success: true, inflables: rows });
+});
 
-// 6. LISTAR USUARIOS
+app.get('/platillos', requireAuth, async (req, res) => {
+  try {
+    const [platillos] = await pool.execute('SELECT * FROM platillos WHERE activo = 1');
+    const catalogo = [];
+    for (const p of platillos) {
+      const [variantes] = await pool.execute('SELECT * FROM platillo_variantes WHERE platillo_id = ?', [p.id]);
+      catalogo.push({ id: p.id, nombre: p.nombre, categoria: p.categoria, variantes });
+    }
+    res.json({ success: true, catalogo });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error al cargar catálogo' });
+  }
+});
+
+app.get('/ingredientes', requireAuth, async (req, res) => {
+  const [rows] = await pool.execute('SELECT * FROM ingredientes WHERE activo = 1 ORDER BY categoria, nombre');
+  res.json({ success: true, ingredientes: rows });
+});
+
+app.get('/platillos/:id/variantes', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [variantes] = await pool.execute('SELECT * FROM platillo_variantes WHERE platillo_id = ?', [id]);
+    for (const v of variantes) {
+      const [ings] = await pool.execute(
+        `SELECT i.*, vi.incluido_default
+         FROM variante_ingredientes vi
+         JOIN ingredientes i ON i.id = vi.ingrediente_id
+         WHERE vi.variante_id = ?`, [v.id]
+      );
+      v.ingredientes_default = ings;
+    }
+    res.json({ success: true, variantes });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Error' });
+  }
+});
+
+// ==================== GESTIÓN DE RESERVACIONES ====================
+app.get('/api/reservaciones', requireAdmin, async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT r.*, s.nombre AS salon_nombre 
+      FROM reservaciones r
+      JOIN salones s ON r.salon_id = s.id
+      ORDER BY r.fecha DESC, r.hora_inicio DESC
+    `);
+    res.json({ success: true, reservaciones: rows });
+  } catch (error) {
+    console.error('Error /api/reservaciones:', error);
+    res.status(500).json({ success: false, message: 'Error al obtener reservaciones' });
+  }
+});
+
+app.post('/reservaciones', requireAdmin, async (req, res) => {
+  const { cliente_nombre, cliente_telefono, cliente_email, salon_id, fecha, hora_inicio, hora_fin, num_personas, notas, inflables, platillos } = req.body;
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[salon]] = await conn.execute('SELECT * FROM salones WHERE id = ?', [salon_id]);
+    if (!salon) throw new Error('Salón no encontrado');
+
+    let total = Number(salon.precio_base);
+
+    const [resResult] = await conn.execute(
+      `INSERT INTO reservaciones (cliente_nombre, cliente_telefono, cliente_email, salon_id, fecha, hora_inicio, hora_fin, num_personas, estado, notas, total, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, 0, ?)`,
+      [cliente_nombre, cliente_telefono || null, cliente_email || null, salon_id, fecha, hora_inicio, hora_fin, num_personas, notas || null, req.session.user.id]
+    );
+    const reservacion_id = resResult.insertId;
+
+    if (inflables && Array.isArray(inflables)) {
+      for (const inf of inflables) {
+        const [[infData]] = await conn.execute('SELECT * FROM inflables WHERE id = ?', [inf.inflable_id]);
+        if (infData) {
+          const subtotal = Number(infData.precio) * (inf.cantidad || 1);
+          total += subtotal;
+          await conn.execute(
+            `INSERT INTO reservacion_inflables (reservacion_id, inflable_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)`,
+            [reservacion_id, inf.inflable_id, inf.cantidad || 1, infData.precio]
+          );
+        }
+      }
+    }
+
+    if (platillos && Array.isArray(platillos)) {
+      for (const pl of platillos) {
+        const [[var_]] = await conn.execute('SELECT * FROM platillo_variantes WHERE id = ?', [pl.variante_id]);
+        if (!var_) throw new Error('Variante no encontrada');
+        const cant = pl.cantidad || 1;
+
+        let precioLinea = Number(var_.precio);
+        const extras = pl.agregados || [];
+        for (const ingId of extras) {
+          const [[ing]] = await conn.execute('SELECT precio_extra FROM ingredientes WHERE id = ?', [ingId]);
+          if (ing) precioLinea += Number(ing.precio_extra);
+        }
+        total += precioLinea * cant;
+
+        const [rp] = await conn.execute(
+          `INSERT INTO reservacion_platillos (reservacion_id, variante_id, cantidad, precio_unitario, notas) VALUES (?, ?, ?, ?, ?)`,
+          [reservacion_id, var_.id, cant, precioLinea, pl.notas || null]
+        );
+
+        for (const ingId of (pl.quitados || [])) {
+          await conn.execute(
+            'INSERT INTO reservacion_platillo_opciones (reservacion_platillo_id, ingrediente_id, accion) VALUES (?, ?, ?)',
+            [rp.insertId, ingId, 'quitar']
+          );
+        }
+        for (const ingId of (pl.agregados || [])) {
+          await conn.execute(
+            'INSERT INTO reservacion_platillo_opciones (reservacion_platillo_id, ingrediente_id, accion) VALUES (?, ?, ?)',
+            [rp.insertId, ingId, 'agregar']
+          );
+        }
+      }
+    }
+
+    await conn.execute('UPDATE reservaciones SET total = ? WHERE id = ?', [total, reservacion_id]);
+
+    await conn.commit();
+    conn.release();
+    res.json({ success: true, message: 'Reservación creada con éxito', reservacion_id });
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error al crear reservación:', err);
+    res.status(500).json({ success: false, message: err.message || 'Error en el servidor' });
+  }
+});
+
+app.delete('/api/reservaciones/:id', requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [result] = await conn.execute('DELETE FROM reservaciones WHERE id = ?', [id]);
+    
+    if (result.affectedRows === 0) {
+      throw new Error('Reservación no encontrada');
+    }
+
+    await conn.commit();
+    conn.release();
+    res.json({ success: true, message: 'Reservación eliminada correctamente' });
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('Error al eliminar reservación:', err);
+    res.status(500).json({ success: false, message: err.message || 'Error en el servidor' });
+  }
+});
+
+// ==================== GESTIÓN ADMIN (CONTADURÍA, USUARIOS Y SESIONES) ====================
+app.get('/api/contaduria', requireAdmin, async (req, res) => {
+  try {
+    const [gananciasTotal] = await pool.execute(`SELECT COALESCE(SUM(monto), 0) AS ganancias_totales FROM pagos`);
+    const [reservaciones] = await pool.execute(`SELECT id, cliente_nombre, cliente_telefono, fecha, estado, total AS total_orden FROM reservaciones ORDER BY fecha DESC`);
+    res.json({ success: true, ganancias: gananciasTotal[0].ganancias_totales, reservaciones });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error en contaduría' });
+  }
+});
+
 app.get('/users', requireAdmin, async (req, res) => {
   try {
-    const [rows] = await pool.execute(
-      'SELECT id, nombre, email, is_admin, created_at FROM usuarios'
-    );
+    const [rows] = await pool.execute('SELECT id, nombre, email, is_admin, created_at FROM usuarios');
     res.json({ success: true, users: rows });
   } catch (error) {
-    console.error('Error /users:', error);
     res.status(500).json({ success: false, message: 'Error' });
   }
 });
 
-// 7. ACTUALIZAR USUARIO
-app.put('/users/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { nombre, email } = req.body;
-  if (!nombre || !email) return res.json({ success: false, message: 'Faltan datos' });
-  if (!emailRegex.test(email)) return res.json({ success: false, message: 'Email inválido' });
-
-  try {
-    const [existing] = await pool.execute(
-      'SELECT id FROM usuarios WHERE email = ? AND id != ?',
-      [email, id]
-    );
-    if (existing.length > 0) return res.json({ success: false, message: 'Email ya en uso' });
-
-    const [result] = await pool.execute(
-      'UPDATE usuarios SET nombre = ?, email = ? WHERE id = ?',
-      [nombre, email, id]
-    );
-    if (result.affectedRows === 0) return res.json({ success: false, message: 'Usuario no encontrado' });
-
-    res.json({ success: true, message: 'Usuario actualizado' });
-  } catch (error) {
-    console.error('Error PUT /users/:id:', error);
-    res.status(500).json({ success: false, message: 'Error en el servidor' });
-  }
-});
-
-// 8. ELIMINAR USUARIO (y sus sesiones)
-app.delete('/users/:id', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  if (Number(id) === req.session.user.id) {
-    return res.json({ success: false, message: 'No puedes eliminarte a ti mismo' });
-  }
-
-  try {
-    // Borrar sesiones del usuario antes de borrarlo
-    await knexInstance('sessions').where('sess', 'like', `%"id":${id},%`).del();
-
-    const [result] = await pool.execute('DELETE FROM usuarios WHERE id = ?', [id]);
-    if (result.affectedRows === 0) return res.json({ success: false, message: 'Usuario no encontrado' });
-
-    res.json({ success: true, message: 'Usuario eliminado' });
-  } catch (error) {
-    console.error('Error DELETE /users/:id:', error);
-    res.status(500).json({ success: false, message: 'Error en el servidor' });
-  }
-});
-
-// 9. CAMBIAR ROL ADMIN
-app.put('/users/:id/admin', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  const { is_admin } = req.body;
-  if (Number(id) === req.session.user.id) {
-    return res.json({ success: false, message: 'No puedes cambiar tu propio rol' });
-  }
-
-  try {
-    const [result] = await pool.execute(
-      'UPDATE usuarios SET is_admin = ? WHERE id = ?',
-      [is_admin ? 1 : 0, id]
-    );
-    if (result.affectedRows === 0) return res.json({ success: false, message: 'Usuario no encontrado' });
-    res.json({ success: true, message: is_admin ? 'Usuario ahora es admin' : 'Admin removido' });
-  } catch (error) {
-    console.error('Error PUT /users/:id/admin:', error);
-    res.status(500).json({ success: false, message: 'Error en el servidor' });
-  }
-});
-
-// ==================== GESTIÓN DE SESIONES (ADMIN) ====================
-
-// 10. LISTAR SESIONES ACTIVAS
-// 10. LISTAR SESIONES ACTIVAS
 app.get('/sessions', requireAdmin, async (req, res) => {
   try {
-    const rows = await knexInstance('sessions')
-      .select('sid', 'sess', 'expired')
-      .orderBy('expired', 'desc');
-
+    const rows = await knexInstance('sessions').select('sid', 'sess', 'expired').orderBy('expired', 'desc');
     const sessions = rows.map(r => {
       let data = {};
-      try {
-        // Si ya es un objeto, lo usamos tal cual; si es string, lo parseamos
-        data = typeof r.sess === 'string' ? JSON.parse(r.sess) : (r.sess || {});
-      } catch (err) {
-        console.error('Error parseando sesión:', err);
-      }
-      return {
-        sid: r.sid,
-        user: data.user || null,
-        loginAt: data.loginAt || null,
-        ip: data.ip || null,
-        userAgent: data.userAgent || null,
-        expired: r.expired
-      };
-    }).filter(s => s.user); // solo sesiones con usuario logueado
-
+      try { data = typeof r.sess === 'string' ? JSON.parse(r.sess) : (r.sess || {}); } catch (_) {}
+      return { sid: r.sid, user: data.user || null, loginAt: data.loginAt || null, ip: data.ip || null, userAgent: data.userAgent || null, expired: r.expired };
+    }).filter(s => s.user);
     res.json({ success: true, sessions });
   } catch (error) {
-    console.error('Error /sessions:', error);
-    res.status(500).json({ success: false, message: 'Error al obtener sesiones' });
+    res.status(500).json({ success: false, message: 'Error' });
   }
 });
 
-// 11. CERRAR UNA SESIÓN ESPECÍFICA
 app.delete('/sessions/:sid', requireAdmin, async (req, res) => {
-  const { sid } = req.params;
   try {
-    const deleted = await knexInstance('sessions').where('sid', sid).del();
-    if (deleted === 0) return res.json({ success: false, message: 'Sesión no encontrada' });
+    await knexInstance('sessions').where('sid', req.params.sid).del();
     res.json({ success: true, message: 'Sesión cerrada' });
   } catch (error) {
-    console.error('Error DELETE /sessions/:sid:', error);
     res.status(500).json({ success: false, message: 'Error' });
   }
 });
 
-// 12. CERRAR TODAS LAS SESIONES DE UN USUARIO
-app.delete('/users/:id/sessions', requireAdmin, async (req, res) => {
-  const { id } = req.params;
-  if (Number(id) === req.session.user.id) {
-    return res.json({ success: false, message: 'No puedes cerrar tus propias sesiones desde aquí' });
-  }
-
-  try {
-    const deleted = await knexInstance('sessions')
-      .where('sess', 'like', `%"id":${id},%`)
-      .del();
-    res.json({ success: true, message: `${deleted} sesión(es) cerrada(s)` });
-  } catch (error) {
-    console.error('Error DELETE /users/:id/sessions:', error);
-    res.status(500).json({ success: false, message: 'Error' });
-  }
-});
-
-// ==================== INICIO ====================
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Servidor en http://localhost:${port}`);
-  console.log(`Admin: admin@test.com / 123456`);
+  console.log(`Servidor activo en http://localhost:${port}`);
 });
