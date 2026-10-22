@@ -503,6 +503,7 @@
       });
     });
 
+    
     function quickAdd(varianteId, categoria, precio) {
       let variante = null;
       catalogPlatillos.forEach(p => p.variantes.forEach(v => { if (Number(v.id) === Number(varianteId)) variante = v; }));
@@ -518,6 +519,7 @@
         notas: ''
       });
       renderCart();
+	  updateTotals();
     }
     window.quickAdd = quickAdd;
 
