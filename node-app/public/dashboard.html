@@ -66,17 +66,19 @@
 
         <div id="alertBox" class="alert d-none" role="alert"></div>
 
-        <!-- SECCIÓN RESERVACIONES & POS -->
+        <!-- SECCION RESERVACIONES & POS -->
         <div id="section-reservaciones">
           <div class="row mb-4">
             <div class="col-12 d-flex justify-content-between align-items-center">
               <h4 class="mb-0">Listado de Reservaciones Activas</h4>
-              <button type="button" class="btn btn-success btn-sm" onclick="openNewReservation()">
+
+              <button type="button" class="btn btn-success btn-sm" onclick="openNewReservation()"> <!-- BOTON PARA CAPTURAR DATOS -->
                 <i class="bi bi-cart-plus me-1"></i> Nueva Reservación / POS
               </button>
             </div>
           </div>
-          <div class="table-responsive bg-white p-3 rounded shadow-sm">
+
+          <div class="table-responsive bg-white p-3 rounded shadow-sm">       <!-- TABLA DE LA GESTION DE RESERVACIONES -->
             <table class="table table-striped table-hover align-middle">
               <thead class="table-dark">
                 <tr>
@@ -146,17 +148,18 @@
     </div>
   </div>
 
-  <!-- ================= MODAL NUEVA RESERVACIÓN (POS) ================= -->
+  <!-- ================= MODAL NUEVA RESERVACION (POS) ================= -->
   <div class="modal fade" id="reservationModal" tabindex="-1">
     <div class="modal-dialog modal-xl">
       <div class="modal-content">
         <div class="modal-header bg-dark text-white">
-          <h5 class="modal-title"><i class="bi bi-cart-plus me-2"></i>Nueva Reservación</h5>
+          <h4 class="modal-title"><i class="bi bi-cart-plus me-2"></i>Nueva Reservación</h4>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
 
         <div class="modal-body p-0">
-          <form id="reservationForm" onsubmit="return false;">
+          <form id="reservationForm" onsubmit="return false;">       <!-- +++++++++++++++++++++++++++++++ Aislamiento del Formulario ++++++++++++++++++++++ -->
+
             <div class="p-3 border-bottom bg-light">
               <div class="row g-2">
                 <div class="col-md-3">
@@ -211,10 +214,10 @@
           <div class="row g-0" style="min-height:420px;">
             <div class="col-md-7 border-end">
               <ul class="nav nav-tabs px-3 pt-2" id="catalogTabs">
-                <li class="nav-item"><a class="nav-link active" data-tab="pizza" href="#">🍕 Pizzas</a></li>
-                <li class="nav-item"><a class="nav-link" data-tab="hamburguesa" href="#">🍔 Hamburguesas</a></li>
-                <li class="nav-item"><a class="nav-link" data-tab="bebida" href="#">🥤 Bebidas</a></li>
-                <li class="nav-item"><a class="nav-link" data-tab="malteada" href="#">🥛 Malteadas</a></li>
+                <li class="nav-item"><a class="nav-link active" data-tab="pizza" href="#"> Pizzas</a></li>
+                <li class="nav-item"><a class="nav-link" data-tab="hamburguesa" href="#"> Hamburguesas</a></li>
+                <li class="nav-item"><a class="nav-link" data-tab="bebida" href="#">Bebidas</a></li>
+                <li class="nav-item"><a class="nav-link" data-tab="malteada" href="#">Malteadas</a></li>
               </ul>
               <div class="p-3" id="catalogContent" style="max-height:380px; overflow-y:auto;">
                 <small class="text-muted">Cargando catálogo...</small>
@@ -243,7 +246,7 @@
 
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-          <button type="button" class="btn btn-primary" onclick="submitReservation()">
+          <button type="button" class="btn btn-primary" onclick="submitReservation()">     <!-- +++++++++++++++++++ BOTON DE GUARADADO DE RESERVACION +++++++++++++ -->
             <i class="bi bi-check-circle me-1"></i>Guardar reservación
           </button>
         </div>
@@ -339,7 +342,7 @@
         const data = await res.json();
         const tbody = document.getElementById('reservacionesTableBody');
         if (!tbody) return;
-        
+
         tbody.innerHTML = '';
         if (!data.success || !data.reservaciones.length) {
           tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No hay reservaciones registradas</td></tr>';
@@ -369,6 +372,7 @@
     }
     window.loadReservaciones = loadReservaciones;
 
+    // FUNCION ELIMINAR RESERVACION
     async function deleteReservation(id) {
       if (!confirm(`¿Estás seguro de que deseas eliminar la reservación #${id}?`)) return;
 
@@ -393,6 +397,7 @@
     }
     window.deleteReservation = deleteReservation;
 
+    // FUNCION DE PUNTO DE VENTA
     async function openNewReservation() {
       try {
         if (catalogSalones.length === 0) {
@@ -401,28 +406,30 @@
             fetch('/inflables', { credentials: 'same-origin' }).then(r => r.json()),
             fetch('/platillos', { credentials: 'same-origin' }).then(r => r.json()),
             fetch('/ingredientes', { credentials: 'same-origin' }).then(r => r.json())
-          ]);
+          ]);                                      // FETCH; HACEMOS PETICION AL SERVIDOR PARA TRAER LOS DATOS DE LOS SALONES,INFLABLES,Y PLATILLOS e INGREDIENTES
+          
           catalogSalones      = rs.salones || [];
           catalogInflables    = ri.inflables || [];
           catalogPlatillos    = rp.catalogo || [];
           catalogIngredientes = ring.ingredientes || [];
         }
 
-        const sel = document.getElementById('resSalon');
-        sel.innerHTML = '<option value="">—</option>';
+        const sel = document.getElementById('resSalon');                                                // LLENA EL TIPO DE SALON QUE ESPECIFIQUEMOS SOLAMENTE SI NO SE HABIA ABIERTO ANTES data-cap='30',data-maxinf='1',data-precio='2500'
+        sel.innerHTML = '<option value="">Selecciona</option>';
         catalogSalones.forEach(s => {
           sel.innerHTML += `<option value="${s.id}" data-cap="${s.capacidad}" data-maxinf="${s.max_inflables}" data-precio="${s.precio_base}">${s.nombre} (cap. ${s.capacidad})</option>`;
         });
 
-        document.getElementById('reservationForm')?.reset?.();
+        document.getElementById('reservationForm')?.reset?.();                                  // LIMPIA LAS CASILLAS EN CASO DE QUE YA ESTUVIERA ABIERTA
+
         ['resCliente','resTelefono','resEmail','resPersonas','resFecha','resHoraIni','resHoraFin','resNotas']
           .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-        document.getElementById('resInflables').innerHTML = '<small class="text-muted">Selecciona un salón primero</small>';
-        cart = [];
-        renderCart();
-        renderCatalogTab('pizza');
 
-        reservationModal.show();
+        document.getElementById('resInflables').innerHTML = '<small class="text-muted">Selecciona un salón primero</small>';  // RESETEA LOS INFLABLES Y EL CARRITO
+        cart = [];
+        renderCart();                 // PONE EL CARRITO EN 0.00$
+        renderCatalogTab('pizza');      // INICIA EN LA pestaña DE PIZZAS
+        reservationModal.show();   // Hace visible el cuadrado grande del modal
       } catch (err) {
         console.error(err);
         showAlert('Error al cargar catálogos', 'danger');
@@ -485,10 +492,10 @@
               <div class="text-end">
                 <div class="fw-bold text-success mb-1">$${fmtMoney(v.precio)}</div>
                 ${p.categoria === 'hamburguesa'
-                  ? `<button type="button" class="btn btn-sm btn-warning" onclick="openCustomize(${v.id})"><i class="bi bi-sliders"></i> Personalizar</button>`
-                  : `<button type="button" class="btn btn-sm btn-success" onclick="quickAdd(${v.id}, '${p.categoria}',${v.precio})"><i class="bi bi-plus-lg"></i> Agregar</button>`}
+                  ? `<button type="button" class="btn btn-sm btn-warning" onclick="openCustomize(${v.id})"><i class="bi bi-sliders"></i> Personalizar</button>`                                          
+                  : `<button type="button" class="btn btn-sm btn-success" onclick="quickAdd(${v.id}, '${p.categoria}',${v.precio})"><i class="bi bi-plus-lg"></i> Agregar</button>`}  
               </div>
-            </div>`;
+            </div>`;//BOTON DE AGREGAR COMIDA // BOTON DE PERSONALIZAR 
         });
       });
     }
@@ -503,7 +510,7 @@
       });
     });
 
-    
+    // FUNCION DE AGREGAR {variante_id: 1, nombre: "Pizza Mediana",categoria:"pizza",precio:180,cantidad:1 }
     function quickAdd(varianteId, categoria, precio) {
       let variante = null;
       catalogPlatillos.forEach(p => p.variantes.forEach(v => { if (Number(v.id) === Number(varianteId)) variante = v; }));
@@ -518,13 +525,15 @@
         agregados: [],
         notas: ''
       });
-      renderCart();
-	  updateTotals();
+      renderCart(); // AMBAS MUESTRAN EN LA PARTE DE LA DERECHA Y LA SUMA
+      updateTotals();
     }
     window.quickAdd = quickAdd;
 
+    // FUNCION DE PERSONALIZAR
     async function openCustomize(varianteId) {
       try {
+        // BUSCA EL PLATILLO QUE PERTENECE LA VARIABLE
         let platilloId = null, variante = null;
         catalogPlatillos.forEach(p => {
           p.variantes.forEach(v => {
@@ -535,17 +544,21 @@
           });
         });
 
+        // DE LO CONTRARIO NO SE ENCUENTRA...
         if (!variante || !platilloId) {
           return showAlert('No se encontró la variante seleccionada', 'danger');
         }
 
+        // TRAE LOS DATOS REALES DESDE EL SERVIDOR
         const res = await fetch(`/platillos/${platilloId}/variantes`, { credentials: 'same-origin' });
         const data = await res.json();
         const vFull = data.variantes.find(x => Number(x.id) === Number(varianteId));
         if (!vFull) return;
 
+        // Crea el estado temporal del objeto{Datos de la hamburguesa,IDs de los ingredientes que NO QUIERE,ID de los ingredientes extras }
         currentCustomize = { variante: vFull, quitados: new Set(), agregados: new Set() };
 
+        // RESETEA LA CANTIDAD
         document.getElementById('custTitle').textContent = `Personalizar ${vFull.nombre}`;
         document.getElementById('custNotes').value = '';
         document.getElementById('custQty').value = 1;
@@ -577,6 +590,7 @@
     }
     window.openCustomize = openCustomize;
 
+    // FUNCION PARA QUITAR O AGREGAR INGREDIENTES
     function toggleIng(btn) {
       const id = parseInt(btn.dataset.id);
       const esDefault = btn.dataset.default === '1';

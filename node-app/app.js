@@ -129,6 +129,7 @@ async function initDB(retries = 10) {
 
 initDB();
 
+
 // ==================== RUTAS DE AUTENTICACIÓN ====================
 app.post('/register', async (req, res) => {
   const { nombre, email, password } = req.body;
@@ -199,7 +200,13 @@ app.post('/logout', (req, res) => {
   });
 });
 
-// ==================== CATÁLOGOS PARA EL POS ====================
+
+
+
+
+// ==================== CATALOGOS PARA EL POS ====================
+// En Base a los SELECT's  HACE LAS PETICIONES A LA BASE DE DATOS Y LOS VISUALIZAMOS EN LA PAGINA CON EL FRONTEND dashboar.html
+
 app.get('/salones', requireAuth, async (req, res) => {
   const [rows] = await pool.execute('SELECT * FROM salones WHERE activo = 1');
   res.json({ success: true, salones: rows });
@@ -230,6 +237,9 @@ app.get('/ingredientes', requireAuth, async (req, res) => {
   res.json({ success: true, ingredientes: rows });
 });
 
+
+
+// PERSONALIZACION DE UNA HAMBUERGUESA 
 app.get('/platillos/:id/variantes', requireAuth, async (req, res) => {
   const { id } = req.params;
   try {
@@ -250,9 +260,22 @@ app.get('/platillos/:id/variantes', requireAuth, async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+
+
+
+
 // ==================== GESTIÓN DE RESERVACIONES ====================
 app.get('/api/reservaciones', requireAdmin, async (req, res) => {
   try {
+
+	// Hace un JOIN entre la tabla 'reservaciones' y 'salones' para traer el nombre del salon
+	
     const [rows] = await pool.execute(`
       SELECT r.*, s.nombre AS salon_nombre 
       FROM reservaciones r
@@ -266,31 +289,65 @@ app.get('/api/reservaciones', requireAdmin, async (req, res) => {
   }
 });
 
+
+//Ruta para Crear una nueva reservacion dede el POS del html
 app.post('/reservaciones', requireAdmin, async (req, res) => {
+  //Extrae todos los datos que envio el frontend 
+  
   const { cliente_nombre, cliente_telefono, cliente_email, salon_id, fecha, hora_inicio, hora_fin, num_personas, notas, inflables, platillos } = req.body;
 
+  //Obtiene una conexion exclusiva para hacer la transaccion
   const conn = await pool.getConnection();
   try {
+  
+    // Inicia la transaccion 
     await conn.beginTransaction();
 
+    //Busca los datos del salon(precio,capacidad, y limite de inflables)
     const [[salon]] = await conn.execute('SELECT * FROM salones WHERE id = ?', [salon_id]);
     if (!salon) throw new Error('Salón no encontrado');
 
+	//El total de las reservaciones inicia con el costo base de salon
     let total = Number(salon.precio_base);
 
+	//Guarda la reservacion
+	
     const [resResult] = await conn.execute(
       `INSERT INTO reservaciones (cliente_nombre, cliente_telefono, cliente_email, salon_id, fecha, hora_inicio, hora_fin, num_personas, estado, notas, total, created_by)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pendiente', ?, 0, ?)`,
       [cliente_nombre, cliente_telefono || null, cliente_email || null, salon_id, fecha, hora_inicio, hora_fin, num_personas, notas || null, req.session.user.id]
     );
+
+	//Guarda el ID de de la reservacion para ligar los inflables y platillos.
     const reservacion_id = resResult.insertId;
 
+
+
+    //Bloqueo de inflables
     if (inflables && Array.isArray(inflables)) {
+
+      // REGLA DE NEGOCIO 1: valida que no se pasen del limite de inflables del salon
+      if (inflables.length > salon.max_inflables) {
+        throw new Error(`El salón ${salon.nombre} solo permite un máximo de ${salon.max_inflables} inflable(s).`);
+      }
+
+      // Validación de capacidad máxima de personas
+      if (num_personas > salon.capacidad) {
+        throw new Error(`El salón ${salon.nombre} tiene una capacidad máxima de ${salon.capacidad} personas.`);
+      }
+
+	  //Recorre cada inflable seleccionado
       for (const inf of inflables) {
+        //BUsca el precio real del inflable en la DB
         const [[infData]] = await conn.execute('SELECT * FROM inflables WHERE id = ?', [inf.inflable_id]);
-        if (infData) {
+        
+
+      	if (infData) {
+        //Suma el precio del inflable al total
           const subtotal = Number(infData.precio) * (inf.cantidad || 1);
           total += subtotal;
+          
+		  //Guarda el inflable en la tabla de relacion
           await conn.execute(
             `INSERT INTO reservacion_inflables (reservacion_id, inflable_id, cantidad, precio_unitario) VALUES (?, ?, ?, ?)`,
             [reservacion_id, inf.inflable_id, inf.cantidad || 1, infData.precio]
@@ -299,31 +356,45 @@ app.post('/reservaciones', requireAdmin, async (req, res) => {
       }
     }
 
+	//BLOQUE DE PLATILLOS
     if (platillos && Array.isArray(platillos)) {
+	  //Recorre cada producto (Pizza, hambuerguesa,etc) que el cajero metio al carrito
+	  
       for (const pl of platillos) {
+		//Busca los datos de la variantes como Pizza mediana
         const [[var_]] = await conn.execute('SELECT * FROM platillo_variantes WHERE id = ?', [pl.variante_id]);
         if (!var_) throw new Error('Variante no encontrada');
         const cant = pl.cantidad || 1;
 
+
         let precioLinea = Number(var_.precio);
+        
+		//Suma el costo de los ingredientes EXTRA Agregados
         const extras = pl.agregados || [];
         for (const ingId of extras) {
           const [[ing]] = await conn.execute('SELECT precio_extra FROM ingredientes WHERE id = ?', [ingId]);
           if (ing) precioLinea += Number(ing.precio_extra);
         }
-        total += precioLinea * cant;
 
+        //Suma al total global 
+        total += precioLinea * cant;
+     
+        //Guarda el platillo en la reservación 
         const [rp] = await conn.execute(
           `INSERT INTO reservacion_platillos (reservacion_id, variante_id, cantidad, precio_unitario, notas) VALUES (?, ?, ?, ?, ?)`,
           [reservacion_id, var_.id, cant, precioLinea, pl.notas || null]
         );
 
+        
+		//Guarda ingredientes quitados 
         for (const ingId of (pl.quitados || [])) {
           await conn.execute(
             'INSERT INTO reservacion_platillo_opciones (reservacion_platillo_id, ingrediente_id, accion) VALUES (?, ?, ?)',
             [rp.insertId, ingId, 'quitar']
           );
         }
+        
+        // Guardar ingredientes agregados
         for (const ingId of (pl.agregados || [])) {
           await conn.execute(
             'INSERT INTO reservacion_platillo_opciones (reservacion_platillo_id, ingrediente_id, accion) VALUES (?, ?, ?)',
@@ -332,19 +403,25 @@ app.post('/reservaciones', requireAdmin, async (req, res) => {
         }
       }
     }
-
+	//Actualiza la reservacion principal con el TOTAL calculado (Salon + Inflables + Comida)
     await conn.execute('UPDATE reservaciones SET total = ? WHERE id = ?', [total, reservacion_id]);
 
+
+	//Confirma y guarda los cambios en la base de datos
     await conn.commit();
     conn.release();
     res.json({ success: true, message: 'Reservación creada con éxito', reservacion_id });
   } catch (err) {
     await conn.rollback();
     conn.release();
+    
     console.error('Error al crear reservación:', err);
     res.status(500).json({ success: false, message: err.message || 'Error en el servidor' });
   }
 });
+
+
+// Ruta para elimiar una reservacion
 
 app.delete('/api/reservaciones/:id', requireAdmin, async (req, res) => {
   const { id } = req.params;
@@ -368,6 +445,12 @@ app.delete('/api/reservaciones/:id', requireAdmin, async (req, res) => {
     res.status(500).json({ success: false, message: err.message || 'Error en el servidor' });
   }
 });
+
+
+
+
+
+
 
 // ==================== GESTIÓN ADMIN (CONTADURÍA, USUARIOS Y SESIONES) ====================
 app.get('/api/contaduria', requireAdmin, async (req, res) => {
